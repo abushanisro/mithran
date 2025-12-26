@@ -5,6 +5,7 @@ import { StatCard } from '@/components/features/dashboard';
 import { StatusBadge } from '@/components/common/status-badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   FolderKanban,
   Users,
@@ -17,19 +18,24 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from 'recharts';
 import { useProjects, useVendors } from '@/lib/api/hooks';
+import dynamic from 'next/dynamic';
+import { Suspense } from 'react';
+
+// Lazy load heavy chart components
+const CostChart = dynamic(() => import('@/components/features/dashboard/charts').then(mod => ({ default: mod.CostChart })), {
+  loading: () => <ChartSkeleton />,
+  ssr: false,
+});
+
+const StatusPieChart = dynamic(() => import('@/components/features/dashboard/charts').then(mod => ({ default: mod.StatusPieChart })), {
+  loading: () => <div className="h-48"><Skeleton className="h-full w-full" /></div>,
+  ssr: false,
+});
+
+function ChartSkeleton() {
+  return <div className="h-72"><Skeleton className="h-full w-full" /></div>;
+}
 
 const statusCounts = [
   { status: 'raw_material_procurement', label: 'Raw Material', count: 0 },
@@ -42,14 +48,6 @@ const statusCounts = [
   { status: 'production', label: 'Production', count: 0 },
   { status: 'supply_chain', label: 'Supply Chain', count: 0 },
   { status: 'lost', label: 'Lost', count: 0 },
-];
-
-const CHART_COLORS = [
-  'hsl(var(--chart-1))',
-  'hsl(var(--chart-2))',
-  'hsl(var(--chart-3))',
-  'hsl(var(--chart-4))',
-  'hsl(var(--chart-5))',
 ];
 
 export default function DashboardPage() {
@@ -177,37 +175,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             {statusDistribution.length > 0 ? (
-              <div className="h-48">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={statusDistribution}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={45}
-                      outerRadius={75}
-                      paddingAngle={3}
-                      dataKey="count"
-                      nameKey="label"
-                    >
-                      {statusDistribution.map((_, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={CHART_COLORS[index % CHART_COLORS.length]}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '12px',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
+              <StatusPieChart statusDistribution={statusDistribution} />
             ) : (
               <div className="h-48 flex items-center justify-center text-muted-foreground">
                 <div className="text-center">
@@ -234,40 +202,7 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           {projects.length > 0 ? (
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={projects.slice(0, 8).map((p) => ({
-                    name: p.name?.substring(0, 15) || 'Unnamed',
-                    quoted: Number(p.quotedCost) || 0,
-                    should: Number(p.shouldCost) || 0,
-                  }))}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis
-                    dataKey="name"
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                    axisLine={{ stroke: 'hsl(var(--border))' }}
-                  />
-                  <YAxis
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                    tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
-                    axisLine={{ stroke: 'hsl(var(--border))' }}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '12px',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                    }}
-                  />
-                  <Bar dataKey="quoted" name="Quoted Cost" fill="hsl(var(--chart-1))" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="should" name="Should Cost" fill="hsl(var(--chart-2))" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <CostChart projects={projects} />
           ) : (
             <div className="h-72 flex items-center justify-center text-muted-foreground">
               <div className="text-center">
