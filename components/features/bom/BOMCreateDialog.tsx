@@ -363,7 +363,7 @@ export function BOMCreateDialog({ projectId, open, onOpenChange, onSuccess }: BO
                         />
                         <div className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap ${getItemTypeColor(item.itemType)}`}>
                           <span className="hidden sm:inline">{ITEM_TYPE_LABELS[item.itemType]}</span>
-                          <span className="sm:hidden">{(ITEM_TYPE_LABELS[item.itemType] || '').split('-')[0].substring(0, 4)}</span>
+                          <span className="sm:hidden">{(ITEM_TYPE_LABELS[item.itemType] || '').split('-')[0]?.substring(0, 4)}</span>
                         </div>
                         {items.length > 1 && (
                           <Button
