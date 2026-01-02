@@ -25,18 +25,18 @@ export class VendorsService {
   // ============================================================================
 
   async findAll(query: QueryVendorsDto, userId: string, accessToken: string) {
-    this.logger.log('Fetching all vendors with filters', 'VendorsService');
+    this.logger.log('Fetching all vendors from shared database', 'VendorsService');
 
     const page = query.page || 1;
     const limit = Math.min(query.limit || 20, 100); // Cap at 100 for performance
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
+    // Shared database - all authenticated users see all vendors
     let queryBuilder = this.supabaseService
       .getClient(accessToken)
       .from('vendor_summary')
       .select('*', { count: 'exact' })
-      .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
     // Apply search filter (search across name, city, state)
@@ -174,14 +174,13 @@ export class VendorsService {
   }
 
   async findOne(id: string, userId: string, accessToken: string) {
-    this.logger.log(`Fetching vendor: ${id}`, 'VendorsService');
+    this.logger.log(`Fetching vendor: ${id} from shared database`, 'VendorsService');
 
     const { data, error } = await this.supabaseService
       .getClient(accessToken)
       .from('vendor_summary')
       .select('*')
       .eq('id', id)
-      .eq('user_id', userId)
       .single();
 
     if (error || !data) {
@@ -217,9 +216,9 @@ export class VendorsService {
   }
 
   async update(id: string, updateVendorDto: UpdateVendorDto, userId: string, accessToken: string) {
-    this.logger.log(`Updating vendor: ${id}`, 'VendorsService');
+    this.logger.log(`Updating vendor: ${id} in shared database`, 'VendorsService');
 
-    // Verify vendor exists and belongs to user
+    // Verify vendor exists (shared database - no user check)
     await this.findOne(id, userId, accessToken);
 
     // Convert camelCase to snake_case for database
@@ -230,7 +229,6 @@ export class VendorsService {
       .from('vendors')
       .update(vendorData)
       .eq('id', id)
-      .eq('user_id', userId)
       .select()
       .single();
 
@@ -243,17 +241,16 @@ export class VendorsService {
   }
 
   async remove(id: string, userId: string, accessToken: string) {
-    this.logger.log(`Deleting vendor: ${id}`, 'VendorsService');
+    this.logger.log(`Deleting vendor: ${id} from shared database`, 'VendorsService');
 
-    // Verify vendor exists and belongs to user
+    // Verify vendor exists (shared database - no user check)
     await this.findOne(id, userId, accessToken);
 
     const { error } = await this.supabaseService
       .getClient(accessToken)
       .from('vendors')
       .delete()
-      .eq('id', id)
-      .eq('user_id', userId);
+      .eq('id', id);
 
     if (error) {
       this.logger.error(`Error deleting vendor: ${error.message}`, 'VendorsService');
@@ -264,21 +261,21 @@ export class VendorsService {
   }
 
   async removeAll(userId: string, accessToken: string) {
-    this.logger.log('Deleting all vendors', 'VendorsService');
+    this.logger.log('Deleting all vendors from shared database (WARNING: affects all users)', 'VendorsService');
 
-    // First get count
+    // First get count of all vendors
     const { count } = await this.supabaseService
       .getClient(accessToken)
       .from('vendors')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId);
+      .select('*', { count: 'exact', head: true });
 
-    // Delete all vendors for this user
+    // Delete ALL vendors from shared database
+    // WARNING: This affects all users in multi-tenant setup
     const { error } = await this.supabaseService
       .getClient(accessToken)
       .from('vendors')
       .delete()
-      .eq('user_id', userId);
+      .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all (dummy condition)
 
     if (error) {
       this.logger.error(`Error deleting all vendors: ${error.message}`, 'VendorsService');
@@ -286,7 +283,7 @@ export class VendorsService {
     }
 
     return {
-      message: 'All vendors deleted successfully',
+      message: 'All vendors deleted successfully from shared database',
       deleted: count || 0
     };
   }
@@ -296,9 +293,9 @@ export class VendorsService {
   // ============================================================================
 
   async findEquipment(vendorId: string, userId: string, accessToken: string) {
-    this.logger.log(`Fetching equipment for vendor: ${vendorId}`, 'VendorsService');
+    this.logger.log(`Fetching equipment for vendor: ${vendorId} (shared database)`, 'VendorsService');
 
-    // Verify vendor belongs to user
+    // Verify vendor exists (shared database - no user check)
     await this.findOne(vendorId, userId, accessToken);
 
     const { data, error } = await this.supabaseService
@@ -317,9 +314,9 @@ export class VendorsService {
   }
 
   async createEquipment(createEquipmentDto: CreateVendorEquipmentDto, userId: string, accessToken: string) {
-    this.logger.log(`Creating equipment for vendor: ${createEquipmentDto.vendorId}`, 'VendorsService');
+    this.logger.log(`Creating equipment for vendor: ${createEquipmentDto.vendorId} (shared database)`, 'VendorsService');
 
-    // Verify vendor belongs to user
+    // Verify vendor exists (shared database - no user check)
     await this.findOne(createEquipmentDto.vendorId, userId, accessToken);
 
     const equipmentData = this.convertToSnakeCase(createEquipmentDto);
@@ -340,17 +337,17 @@ export class VendorsService {
   }
 
   async updateEquipment(id: string, updateEquipmentDto: UpdateVendorEquipmentDto, userId: string, accessToken: string) {
-    this.logger.log(`Updating equipment: ${id}`, 'VendorsService');
+    this.logger.log(`Updating equipment: ${id} (shared database)`, 'VendorsService');
 
-    // Get equipment to verify it belongs to user's vendor
+    // Verify equipment exists (shared database - no user check)
     const { data: equipment, error: getError } = await this.supabaseService
       .getClient(accessToken)
       .from('vendor_equipment')
-      .select('*, vendors!inner(user_id)')
+      .select('id, vendor_id')
       .eq('id', id)
       .single();
 
-    if (getError || !equipment || equipment.vendors.user_id !== userId) {
+    if (getError || !equipment) {
       throw new NotFoundException(`Equipment with ID ${id} not found`);
     }
 
@@ -373,17 +370,17 @@ export class VendorsService {
   }
 
   async removeEquipment(id: string, userId: string, accessToken: string) {
-    this.logger.log(`Deleting equipment: ${id}`, 'VendorsService');
+    this.logger.log(`Deleting equipment: ${id} (shared database)`, 'VendorsService');
 
-    // Get equipment to verify it belongs to user's vendor
+    // Verify equipment exists (shared database - no user check)
     const { data: equipment, error: getError } = await this.supabaseService
       .getClient(accessToken)
       .from('vendor_equipment')
-      .select('*, vendors!inner(user_id)')
+      .select('id')
       .eq('id', id)
       .single();
 
-    if (getError || !equipment || equipment.vendors.user_id !== userId) {
+    if (getError || !equipment) {
       throw new NotFoundException(`Equipment with ID ${id} not found`);
     }
 
@@ -406,9 +403,9 @@ export class VendorsService {
   // ============================================================================
 
   async findServices(vendorId: string, userId: string, accessToken: string) {
-    this.logger.log(`Fetching services for vendor: ${vendorId}`, 'VendorsService');
+    this.logger.log(`Fetching services for vendor: ${vendorId} (shared database)`, 'VendorsService');
 
-    // Verify vendor belongs to user
+    // Verify vendor exists (shared database - no user check)
     await this.findOne(vendorId, userId, accessToken);
 
     const { data, error } = await this.supabaseService
@@ -427,9 +424,9 @@ export class VendorsService {
   }
 
   async createService(createServiceDto: CreateVendorServiceDto, userId: string, accessToken: string) {
-    this.logger.log(`Creating service for vendor: ${createServiceDto.vendorId}`, 'VendorsService');
+    this.logger.log(`Creating service for vendor: ${createServiceDto.vendorId} (shared database)`, 'VendorsService');
 
-    // Verify vendor belongs to user
+    // Verify vendor exists (shared database - no user check)
     await this.findOne(createServiceDto.vendorId, userId, accessToken);
 
     const serviceData = this.convertToSnakeCase(createServiceDto);
@@ -450,17 +447,17 @@ export class VendorsService {
   }
 
   async updateService(id: string, updateServiceDto: UpdateVendorServiceDto, userId: string, accessToken: string) {
-    this.logger.log(`Updating service: ${id}`, 'VendorsService');
+    this.logger.log(`Updating service: ${id} (shared database)`, 'VendorsService');
 
-    // Get service to verify it belongs to user's vendor
+    // Verify service exists (shared database - no user check)
     const { data: service, error: getError } = await this.supabaseService
       .getClient(accessToken)
       .from('vendor_services')
-      .select('*, vendors!inner(user_id)')
+      .select('id, vendor_id')
       .eq('id', id)
       .single();
 
-    if (getError || !service || service.vendors.user_id !== userId) {
+    if (getError || !service) {
       throw new NotFoundException(`Service with ID ${id} not found`);
     }
 
@@ -483,17 +480,17 @@ export class VendorsService {
   }
 
   async removeService(id: string, userId: string, accessToken: string) {
-    this.logger.log(`Deleting service: ${id}`, 'VendorsService');
+    this.logger.log(`Deleting service: ${id} (shared database)`, 'VendorsService');
 
-    // Get service to verify it belongs to user's vendor
+    // Verify service exists (shared database - no user check)
     const { data: service, error: getError } = await this.supabaseService
       .getClient(accessToken)
       .from('vendor_services')
-      .select('*, vendors!inner(user_id)')
+      .select('id')
       .eq('id', id)
       .single();
 
-    if (getError || !service || service.vendors.user_id !== userId) {
+    if (getError || !service) {
       throw new NotFoundException(`Service with ID ${id} not found`);
     }
 
@@ -516,9 +513,9 @@ export class VendorsService {
   // ============================================================================
 
   async findContacts(vendorId: string, userId: string, accessToken: string) {
-    this.logger.log(`Fetching contacts for vendor: ${vendorId}`, 'VendorsService');
+    this.logger.log(`Fetching contacts for vendor: ${vendorId} (shared database)`, 'VendorsService');
 
-    // Verify vendor belongs to user
+    // Verify vendor exists (shared database - no user check)
     await this.findOne(vendorId, userId, accessToken);
 
     const { data, error } = await this.supabaseService
@@ -538,9 +535,9 @@ export class VendorsService {
   }
 
   async createContact(createContactDto: CreateVendorContactDto, userId: string, accessToken: string) {
-    this.logger.log(`Creating contact for vendor: ${createContactDto.vendorId}`, 'VendorsService');
+    this.logger.log(`Creating contact for vendor: ${createContactDto.vendorId} (shared database)`, 'VendorsService');
 
-    // Verify vendor belongs to user
+    // Verify vendor exists (shared database - no user check)
     await this.findOne(createContactDto.vendorId, userId, accessToken);
 
     const contactData = this.convertToSnakeCase(createContactDto);
@@ -561,17 +558,17 @@ export class VendorsService {
   }
 
   async updateContact(id: string, updateContactDto: UpdateVendorContactDto, userId: string, accessToken: string) {
-    this.logger.log(`Updating contact: ${id}`, 'VendorsService');
+    this.logger.log(`Updating contact: ${id} (shared database)`, 'VendorsService');
 
-    // Get contact to verify it belongs to user's vendor
+    // Verify contact exists (shared database - no user check)
     const { data: contact, error: getError } = await this.supabaseService
       .getClient(accessToken)
       .from('vendor_contacts')
-      .select('*, vendors!inner(user_id)')
+      .select('id, vendor_id')
       .eq('id', id)
       .single();
 
-    if (getError || !contact || contact.vendors.user_id !== userId) {
+    if (getError || !contact) {
       throw new NotFoundException(`Contact with ID ${id} not found`);
     }
 
@@ -594,17 +591,17 @@ export class VendorsService {
   }
 
   async removeContact(id: string, userId: string, accessToken: string) {
-    this.logger.log(`Deleting contact: ${id}`, 'VendorsService');
+    this.logger.log(`Deleting contact: ${id} (shared database)`, 'VendorsService');
 
-    // Get contact to verify it belongs to user's vendor
+    // Verify contact exists (shared database - no user check)
     const { data: contact, error: getError } = await this.supabaseService
       .getClient(accessToken)
       .from('vendor_contacts')
-      .select('*, vendors!inner(user_id)')
+      .select('id')
       .eq('id', id)
       .single();
 
-    if (getError || !contact || contact.vendors.user_id !== userId) {
+    if (getError || !contact) {
       throw new NotFoundException(`Contact with ID ${id} not found`);
     }
 
@@ -665,7 +662,7 @@ export class VendorsService {
   // ============================================================================
 
   async importFromCsv(file: Express.Multer.File, userId: string, accessToken: string) {
-    this.logger.log('Importing vendors from CSV', 'VendorsService');
+    this.logger.log('Importing vendors from CSV (Shared Database Mode)', 'VendorsService');
 
     if (!file) {
       throw new InternalServerErrorException('No file provided');
@@ -681,74 +678,149 @@ export class VendorsService {
       const results = {
         total: dataLines.length,
         created: 0,
+        updated: 0,
+        skipped: 0,
         failed: 0,
         errors: [] as any[],
       };
 
       for (let i = 0; i < dataLines.length; i++) {
+        let row: string[] = [];
         try {
-          const row = this.parseCSVLine(dataLines[i]);
+          row = this.parseCSVLine(dataLines[i]);
           if (row.length < 10) continue; // Skip invalid rows
 
           const vendorData = this.mapCSVToVendor(row, i + 3); // +3 for header rows and 1-based index
 
-          // Create vendor
-          const { data: vendor, error: vendorError } = await this.supabaseService
+          // Create vendor - handle duplicates in shared database
+          const supplierCode = `CUS-${row[0]}`;
+
+          // Check if vendor already exists in shared database (any user)
+          const { data: existingVendor, error: checkError } = await this.supabaseService
             .getClient(accessToken)
             .from('vendors')
-            .insert({
-              supplier_code: `CUS-${row[0]}`,
-              name: row[1],
-              addresses: row[2],
-              website: row[3],
-              company_phone: row[4],
-              major_customers: row[5] !== 'NA' ? row[5] : null,
-              countries_served: row[6] !== 'NA' ? row[6] : null,
-              company_turnover: row[7] !== 'NA' ? row[7] : null,
-              industries: this.parseArrayField(row[8]),
-              process: this.parseArrayField(row[9]),
-              materials: this.parseArrayField(row[10]),
-              certifications: this.parseArrayField(row[11]),
-              inspection_options: row[12] !== 'NA' ? row[12] : null,
-              qms_metrics: row[13] !== 'NA' ? row[13] : null,
-              qms_procedures: row[14] !== 'NA' ? row[14] : null,
-              manufacturing_workshop: row[15] !== 'NA' ? row[15] : null,
-              warehouse: this.parseBoolean(row[16]),
-              packing: this.parseBoolean(row[17]),
-              logistics_transportation: this.parseBoolean(row[18]),
-              maximum_production_capacity: row[19] !== 'NA' ? row[19] : null,
-              average_capacity_utilization: this.parseNumber(row[20]),
-              num_hours_in_shift: this.parseNumber(row[21]),
-              num_shifts_in_day: this.parseNumber(row[22]),
-              num_working_days_per_week: this.parseNumber(row[23]),
-              in_house_material_testing: this.parseBoolean(row[24]),
-              num_operators: this.parseNumber(row[25]),
-              num_engineers: this.parseNumber(row[26]),
-              num_production_managers: this.parseNumber(row[27]),
-              company_profile_url: row[36],
-              machine_list_url: row[37],
-              city: this.extractCity(row[2]),
-              state: this.extractState(row[2]),
-              country: this.extractCountry(row[2]),
-              user_id: userId,
-              status: 'active',
-              vendor_type: 'supplier',
-            })
-            .select()
-            .single();
+            .select('id, user_id, supplier_code, name, updated_at')
+            .eq('supplier_code', supplierCode)
+            .maybeSingle();
 
-          if (vendorError) {
+          // If there's an error checking, log and skip this row
+          if (checkError && checkError.code !== 'PGRST116') {
+            this.logger.warn(`Error checking for existing vendor: ${checkError.message}`, 'VendorsService');
             results.failed++;
             results.errors.push({
               row: i + 3,
               name: row[1],
-              error: vendorError.message,
+              error: `Database error: ${checkError.message}`,
             });
             continue;
           }
 
-          // Create contacts if available
+          const isUpdate = !!existingVendor;
+
+          // Skip if vendor exists and data is identical (optimization)
+          if (existingVendor && existingVendor.name === row[1]) {
+            // Quick check - if name matches, likely a duplicate upload
+            results.skipped++;
+            continue;
+          }
+
+          const vendorPayload = {
+            supplier_code: supplierCode,
+            name: row[1],
+            addresses: row[2],
+            website: row[3],
+            company_phone: row[4],
+            major_customers: row[5] !== 'NA' ? row[5] : null,
+            countries_served: row[6] !== 'NA' ? row[6] : null,
+            company_turnover: row[7] !== 'NA' ? row[7] : null,
+            industries: this.parseArrayField(row[8]),
+            process: this.parseArrayField(row[9]),
+            materials: this.parseArrayField(row[10]),
+            certifications: this.parseArrayField(row[11]),
+            inspection_options: row[12] !== 'NA' ? row[12] : null,
+            qms_metrics: row[13] !== 'NA' ? row[13] : null,
+            qms_procedures: row[14] !== 'NA' ? row[14] : null,
+            manufacturing_workshop: row[15] !== 'NA' ? row[15] : null,
+            warehouse: this.parseBoolean(row[16]),
+            packing: this.parseBoolean(row[17]),
+            logistics_transportation: this.parseBoolean(row[18]),
+            maximum_production_capacity: row[19] !== 'NA' ? row[19] : null,
+            average_capacity_utilization: this.parseNumber(row[20]),
+            num_hours_in_shift: this.parseInteger(row[21]),
+            num_shifts_in_day: this.parseInteger(row[22]),
+            num_working_days_per_week: this.parseInteger(row[23]),
+            in_house_material_testing: this.parseBoolean(row[24]),
+            num_operators: this.parseInteger(row[25]),
+            num_engineers: this.parseInteger(row[26]),
+            num_production_managers: this.parseInteger(row[27]),
+            company_profile_url: row[36],
+            machine_list_url: row[37],
+            city: this.extractCity(row[2]),
+            state: this.extractState(row[2]),
+            country: this.extractCountry(row[2]),
+            user_id: userId,
+            status: 'active',
+            vendor_type: 'supplier',
+          };
+
+          // Use conditional INSERT/UPDATE for shared database
+          let vendor: any;
+          let vendorError: any;
+
+          if (isUpdate) {
+            // Update existing vendor in shared database
+            // Exclude immutable fields (supplier_code shouldn't change)
+            const { supplier_code, ...updatePayload } = vendorPayload;
+            const { data, error } = await this.supabaseService
+              .getClient(accessToken)
+              .from('vendors')
+              .update(updatePayload)
+              .eq('id', existingVendor.id)
+              .select()
+              .single();
+            vendor = data;
+            vendorError = error;
+          } else {
+            // Insert new vendor to shared database
+            const { data, error } = await this.supabaseService
+              .getClient(accessToken)
+              .from('vendors')
+              .insert(vendorPayload)
+              .select()
+              .single();
+            vendor = data;
+            vendorError = error;
+          }
+
+          if (vendorError) {
+            results.failed++;
+            // Provide better error message for duplicate key constraint
+            let errorMessage = vendorError.message;
+            if (vendorError.message.includes('duplicate key') && vendorError.message.includes('vendors_supplier_code_key')) {
+              errorMessage = `Supplier code ${supplierCode} already exists in the system. The vendor cannot be updated (may belong to different user or access restricted).`;
+            } else if (vendorError.message.includes('violates row-level security policy')) {
+              errorMessage = `Access denied: Cannot ${isUpdate ? 'update' : 'create'} vendor due to security policy`;
+            }
+            results.errors.push({
+              row: i + 3,
+              name: row[1],
+              error: errorMessage,
+            });
+            continue;
+          }
+
+          // Create or update contacts if available
           if (row[28] && row[30] && vendor?.id) {
+            // Delete existing primary contact if updating
+            if (isUpdate) {
+              await this.supabaseService
+                .getClient(accessToken)
+                .from('vendor_contacts')
+                .delete()
+                .eq('vendor_id', vendor.id)
+                .eq('is_primary', true);
+            }
+
             await this.supabaseService
               .getClient(accessToken)
               .from('vendor_contacts')
@@ -763,6 +835,16 @@ export class VendorsService {
           }
 
           if (row[32] && row[34] && vendor?.id) {
+            // Delete existing secondary contact if updating
+            if (isUpdate) {
+              await this.supabaseService
+                .getClient(accessToken)
+                .from('vendor_contacts')
+                .delete()
+                .eq('vendor_id', vendor.id)
+                .eq('is_primary', false);
+            }
+
             await this.supabaseService
               .getClient(accessToken)
               .from('vendor_contacts')
@@ -776,20 +858,28 @@ export class VendorsService {
               });
           }
 
-          results.created++;
+          if (isUpdate) {
+            results.updated++;
+          } else {
+            results.created++;
+          }
         } catch (error: any) {
           results.failed++;
           results.errors.push({
             row: i + 3,
+            name: row[1] || 'Unknown',
             error: error.message,
           });
         }
       }
 
-      this.logger.log(`CSV Import completed: ${results.created} created, ${results.failed} failed`, 'VendorsService');
+      this.logger.log(
+        `CSV Import completed: ${results.created} created, ${results.updated} updated, ${results.skipped} skipped, ${results.failed} failed`,
+        'VendorsService'
+      );
 
       return {
-        message: `Successfully imported ${results.created} vendors. ${results.failed} failed.`,
+        message: `Import completed: ${results.created} created, ${results.updated} updated, ${results.skipped} skipped (duplicates), ${results.failed} failed.`,
         ...results,
       };
     } catch (error: any) {
@@ -837,8 +927,32 @@ export class VendorsService {
 
   private parseNumber(value: string): number | null {
     if (!value || value === 'NA') return null;
-    const num = parseFloat(value);
+    // Remove percentage signs, commas, and whitespace
+    const cleaned = value.toString().trim().replace(/[%,]/g, '');
+    const num = parseFloat(cleaned);
     return isNaN(num) ? null : num;
+  }
+
+  private parseInteger(value: string): number | null {
+    if (!value || value === 'NA') return null;
+    // Remove percentage signs, commas, and whitespace
+    const cleaned = value.toString().trim().replace(/[%,]/g, '');
+    const num = parseFloat(cleaned);
+    if (isNaN(num)) return null;
+    // Round to nearest integer to handle decimal inputs like "8.5" or "30.4"
+    return Math.round(num);
+  }
+
+  private parsePercentage(value: string): number | null {
+    if (!value || value === 'NA') return null;
+    // Remove percentage sign, whitespace, and convert to number
+    const cleaned = value.toString().trim().replace('%', '');
+    const num = parseFloat(cleaned);
+    if (isNaN(num)) return null;
+
+    // If original value had %, assume it's already in 0-100 range
+    // Otherwise assume it needs no conversion
+    return num;
   }
 
   private parseArrayField(value: string): string[] {

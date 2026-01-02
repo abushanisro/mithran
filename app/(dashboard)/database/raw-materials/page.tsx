@@ -496,10 +496,10 @@ export default function RawMaterialsPage() {
                 value={deleteConfirmText}
                 onChange={(e) => setDeleteConfirmText(e.target.value)}
                 className={`font-mono ${deleteConfirmText && deleteConfirmText.toLowerCase() !== CONFIRM_DELETE_TEXT
-                    ? 'border-red-500 focus-visible:ring-red-500'
-                    : deleteConfirmText.toLowerCase() === CONFIRM_DELETE_TEXT
-                      ? 'border-green-500 focus-visible:ring-green-500'
-                      : ''
+                  ? 'border-red-500 focus-visible:ring-red-500'
+                  : deleteConfirmText.toLowerCase() === CONFIRM_DELETE_TEXT
+                    ? 'border-green-500 focus-visible:ring-green-500'
+                    : ''
                   }`}
                 autoComplete="off"
               />
@@ -510,7 +510,7 @@ export default function RawMaterialsPage() {
               )}
               {deleteConfirmText.toLowerCase() === CONFIRM_DELETE_TEXT && (
                 <p className="text-xs text-green-600">
-                  ✓ Confirmed. You can now proceed with deletion.
+                  Confirmed. You can now proceed with deletion.
                 </p>
               )}
             </div>

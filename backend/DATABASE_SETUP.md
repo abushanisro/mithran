@@ -121,8 +121,8 @@ Expected output:
 📊 Database: postgres
 🏠 Host: db.xxxxx.supabase.co
 
-✓ Found 0 previously executed migration(s)
-✓ Found 1 total migration file(s)
+ Found 0 previously executed migration(s)
+ Found 1 total migration file(s)
 
 ⏳ Running 1 pending migration(s)...
 

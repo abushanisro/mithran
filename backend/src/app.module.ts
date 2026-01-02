@@ -14,6 +14,8 @@ import { ProcessRoutesModule } from './modules/process-routes/process-routes.mod
 import { ProcessTemplatesModule } from './modules/process-templates/process-templates.module';
 import { MaterialsModule } from './modules/materials/materials.module';
 import { RawMaterialsModule } from './modules/raw-materials/raw-materials.module';
+import { MHRModule } from './modules/mhr/mhr.module';
+import { LSRModule } from './modules/lsr/lsr.module';
 import { HealthModule } from './modules/health/health.module';
 import { LoggerModule } from './common/logger/logger.module';
 import { SupabaseService } from './common/supabase/supabase.service';
@@ -57,6 +59,8 @@ import { validate } from './config/env.validation';
     ProcessTemplatesModule,
     MaterialsModule,
     RawMaterialsModule,
+    MHRModule,
+    LSRModule,
     HealthModule,
   ],
   controllers: [],

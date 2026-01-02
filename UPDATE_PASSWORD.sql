@@ -22,7 +22,7 @@ SELECT
   updated_at,
   email_confirmed_at,
   CASE
-    WHEN encrypted_password IS NOT NULL THEN 'Password set ✓'
+    WHEN encrypted_password IS NOT NULL THEN 'Password set '
     ELSE 'No password'
   END as password_status
 FROM auth.users

@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException, BadRequestException } from '@nestjs/common';
 import { Logger } from '../../common/logger/logger.service';
 import { SupabaseService } from '../../common/supabase/supabase.service';
 import { CreateProjectDto, UpdateProjectDto, QueryProjectsDto } from './dto/projects.dto';
 import { ProjectResponseDto, ProjectListResponseDto } from './dto/project-response.dto';
+import { validate as isValidUUID } from 'uuid';
 
 @Injectable()
 export class ProjectsService {
@@ -57,6 +58,12 @@ export class ProjectsService {
   async findOne(id: string, userId: string, accessToken: string): Promise<ProjectResponseDto> {
     this.logger.log(`Fetching project: ${id}`, 'ProjectsService');
 
+    // Validate UUID format
+    if (!this.isValidUUID(id)) {
+      this.logger.warn(`Invalid UUID format provided: ${id}`, 'ProjectsService');
+      throw new BadRequestException('Invalid project ID format');
+    }
+
     const { data, error } = await this.supabaseService
       .getClient(accessToken)
       .from('projects')
@@ -65,11 +72,30 @@ export class ProjectsService {
       .single();
 
     if (error || !data) {
-      this.logger.error(`Project not found: ${id}`, 'ProjectsService');
+      // Distinguish between different error types
+      if (error?.code === 'PGRST116') {
+        // PostgreSQL "no rows returned" error
+        this.logger.warn(`Project not found: ${id}`, 'ProjectsService');
+      } else if (error) {
+        this.logger.error(`Database error while fetching project ${id}: ${error.message}`, 'ProjectsService');
+      } else {
+        this.logger.warn(`Project not found (no data): ${id}`, 'ProjectsService');
+      }
       throw new NotFoundException(`Project with ID ${id} not found`);
     }
 
     return ProjectResponseDto.fromDatabase(data);
+  }
+
+  /**
+   * Validate UUID format to prevent invalid queries
+   */
+  private isValidUUID(id: string): boolean {
+    try {
+      return isValidUUID(id);
+    } catch {
+      return false;
+    }
   }
 
   async create(createProjectDto: CreateProjectDto, userId: string, accessToken: string): Promise<ProjectResponseDto> {
@@ -104,6 +130,12 @@ export class ProjectsService {
   async update(id: string, updateProjectDto: UpdateProjectDto, userId: string, accessToken: string): Promise<ProjectResponseDto> {
     this.logger.log(`Updating project: ${id}`, 'ProjectsService');
 
+    // Validate UUID format early
+    if (!this.isValidUUID(id)) {
+      this.logger.warn(`Invalid UUID format for update: ${id}`, 'ProjectsService');
+      throw new BadRequestException('Invalid project ID format');
+    }
+
     // Verify project exists and belongs to user (RLS enforces ownership)
     await this.findOne(id, userId, accessToken);
 
@@ -132,6 +164,12 @@ export class ProjectsService {
   async remove(id: string, userId: string, accessToken: string) {
     this.logger.log(`Deleting project: ${id}`, 'ProjectsService');
 
+    // Validate UUID format early
+    if (!this.isValidUUID(id)) {
+      this.logger.warn(`Invalid UUID format for delete: ${id}`, 'ProjectsService');
+      throw new BadRequestException('Invalid project ID format');
+    }
+
     // Verify project exists and belongs to user (RLS enforces ownership)
     await this.findOne(id, userId, accessToken);
 
@@ -151,6 +189,12 @@ export class ProjectsService {
 
   async getCostAnalysis(id: string, userId: string, accessToken: string) {
     this.logger.log(`Getting cost analysis for project: ${id}`, 'ProjectsService');
+
+    // Validate UUID format early
+    if (!this.isValidUUID(id)) {
+      this.logger.warn(`Invalid UUID format for cost analysis: ${id}`, 'ProjectsService');
+      throw new BadRequestException('Invalid project ID format');
+    }
 
     // Verify user owns this project
     const project = await this.findOne(id, userId, accessToken);

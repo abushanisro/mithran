@@ -20,11 +20,18 @@ export default function ProjectDetail() {
   const id = params?.id || '';
   const router = useRouter();
 
-  const { data: project, isLoading: projectLoading } = useProject(id);
+  const {
+    data: project,
+    isLoading: projectLoading,
+    error: projectError,
+    isError: isProjectError
+  } = useProject(id);
+
   const { data: sourcingListsData } = useBOMs({ projectId: id });
   const sourcingLists = sourcingListsData?.boms || [];
   const firstBomId = sourcingLists.length > 0 && sourcingLists[0] ? sourcingLists[0].id : undefined;
 
+  // Loading state
   if (projectLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -33,14 +40,49 @@ export default function ProjectDetail() {
     );
   }
 
-  if (!project) {
+  // Error state - show detailed error information
+  if (isProjectError || !project) {
+    const errorMessage = projectError?.message || 'Project not found';
+    const is404 = (projectError as any)?.statusCode === 404;
+    const is400 = (projectError as any)?.statusCode === 400;
+
     return (
-      <div className="text-center py-12">
-        <p className="text-muted-foreground">Project not found</p>
-        <Button variant="outline" className="mt-4" onClick={() => router.push('/projects')}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Projects
-        </Button>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Card className="max-w-md w-full">
+          <CardContent className="pt-6 text-center space-y-4">
+            <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
+              <ArrowLeft className="h-6 w-6 text-destructive" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-lg mb-2">
+                {is404 ? 'Project Not Found' : is400 ? 'Invalid Project ID' : 'Error Loading Project'}
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                {is404
+                  ? 'This project may have been deleted or you may not have access to it.'
+                  : is400
+                  ? 'The project ID format is invalid.'
+                  : errorMessage}
+              </p>
+              {!is404 && !is400 && (
+                <p className="text-xs text-muted-foreground">
+                  Error: {errorMessage}
+                </p>
+              )}
+            </div>
+            <div className="flex gap-2 justify-center">
+              <Button variant="outline" onClick={() => router.push('/projects')}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Projects
+              </Button>
+              {!is404 && !is400 && (
+                <Button variant="default" onClick={() => window.location.reload()}>
+                  Retry
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }

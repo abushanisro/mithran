@@ -159,6 +159,8 @@ export type VendorPerformance = {
 export type CsvImportResult = {
   message: string;
   created: number;
+  updated: number;
+  skipped: number;
   failed: number;
   total: number;
   errors?: Array<{

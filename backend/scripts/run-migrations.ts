@@ -62,7 +62,7 @@ class MigrationRunner {
     `;
 
     await client.query(query);
-    console.log('✓ Migrations tracking table ready');
+    console.log(' Migrations tracking table ready');
   }
 
   /**
@@ -135,11 +135,11 @@ class MigrationRunner {
 
       // Get executed migrations
       const executedMigrations = await this.getExecutedMigrations(client);
-      console.log(`✓ Found ${executedMigrations.length} previously executed migration(s)`);
+      console.log(` Found ${executedMigrations.length} previously executed migration(s)`);
 
       // Load migration files
       const allMigrations = this.loadMigrationFiles();
-      console.log(`✓ Found ${allMigrations.length} total migration file(s)`);
+      console.log(` Found ${allMigrations.length} total migration file(s)`);
 
       // Filter pending migrations
       const pendingMigrations = allMigrations.filter(

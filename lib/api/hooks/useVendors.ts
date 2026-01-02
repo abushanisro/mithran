@@ -152,13 +152,24 @@ export function useUploadVendorsCsv() {
         console.groupEnd();
       }
 
+      // Build comprehensive status message
+      const parts = [];
+      if (data.created > 0) parts.push(`${data.created} created`);
+      if (data.updated > 0) parts.push(`${data.updated} updated`);
+      if (data.skipped > 0) parts.push(`${data.skipped} skipped`);
+      if (data.failed > 0) parts.push(`${data.failed} failed`);
+
+      const summary = parts.join(', ');
+
       if (data.failed > 0) {
         toast.error(
-          `Upload completed: ${data.created} created, ${data.failed} failed. Check console for details.`,
+          `Upload completed: ${summary}. Check console for error details.`,
           { duration: 10000 }
         );
+      } else if (data.created > 0 || data.updated > 0) {
+        toast.success(`Successfully imported vendors: ${summary}`);
       } else {
-        toast.success(`Successfully imported ${data.created} vendors`);
+        toast.info(`No changes made: ${summary}`);
       }
     },
     onError: (error: ApiError) => {

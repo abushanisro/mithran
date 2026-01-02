@@ -30,12 +30,27 @@ export function useProjects(query?: ProjectQuery, options?: { enabled?: boolean 
   });
 }
 
-export function useProject(id: string) {
+export function useProject(id: string, options?: { enabled?: boolean; retry?: boolean }) {
   return useQuery({
     queryKey: projectKeys.detail(id),
     queryFn: () => projectsApi.getById(id),
-    enabled: !!id,
+    enabled: options?.enabled !== false && !!id,
     staleTime: 1000 * 60 * 5,
+    // Don't retry on 404 errors - the project genuinely doesn't exist
+    retry: (failureCount, error) => {
+      if (options?.retry === false) return false;
+      // Don't retry on 404 (not found) or 400 (bad request)
+      const apiError = error as ApiError;
+      if (apiError?.statusCode === 404 || apiError?.statusCode === 400) {
+        return false;
+      }
+      // Retry up to 3 times for other errors (network issues, 500s, etc.)
+      return failureCount < 3;
+    },
+    // Prevent refetching on window focus for error states
+    refetchOnWindowFocus: (query) => {
+      return query.state.status !== 'error';
+    },
   });
 }
 
