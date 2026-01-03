@@ -18,14 +18,17 @@ RUN conda create -n cad-env python=3.11 -y && \
 
 # Activate conda environment and install additional packages
 SHELL ["conda", "run", "-n", "cad-env", "/bin/bash", "-c"]
-RUN pip install --no-cache-dir \
-    fastapi==0.109.0 \
-    uvicorn[standard]==0.27.0 \
-    pydantic==2.5.3 \
-    python-multipart==0.0.6 \
-    aiofiles==23.2.1 \
-    httpx==0.26.0 \
-    python-json-logger==2.0.7
+# Install Python deps into cad-env (CORRECT)
+RUN conda install -n cad-env -c conda-forge \
+    fastapi=0.109.0 \
+    uvicorn=0.27.0 \
+    slowapi=0.1.9 \
+    pydantic=2.5.3 \
+    python-multipart=0.0.6 \
+    aiofiles=23.2.1 \
+    httpx=0.26.0 \
+    python-json-logger=2.0.7 -y && \
+    conda clean -afy
 
 # Copy application code
 COPY main.py .

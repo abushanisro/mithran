@@ -121,7 +121,7 @@ const INITIAL_RUNNER_DIA_DATA = [
   { partWeight: 'Above 250', runnerDia: '7-9' },
 ];
 
-export default function LookupTablesPage() {
+export default function ProcessPage() {
   const [selectedProcess, setSelectedProcess] = useState<number | null>(null);
   const [editingTable, setEditingTable] = useState<string | null>(null);
 
@@ -851,7 +851,7 @@ export default function LookupTablesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Manufacturing Process Database"
+        title="Process"
         description="Click on any process to view, edit, and manage detailed specifications"
       />
 

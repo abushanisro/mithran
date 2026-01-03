@@ -16,7 +16,7 @@ import { MaterialsModule } from './modules/materials/materials.module';
 import { RawMaterialsModule } from './modules/raw-materials/raw-materials.module';
 import { MHRModule } from './modules/mhr/mhr.module';
 import { LSRModule } from './modules/lsr/lsr.module';
-import { ShotWeightModule } from './modules/shot-weight/shot-weight.module';
+import { CalculatorsModule } from './modules/calculators/calculators.module';
 import { HealthModule } from './modules/health/health.module';
 import { LoggerModule } from './common/logger/logger.module';
 import { SupabaseService } from './common/supabase/supabase.service';
@@ -62,7 +62,7 @@ import { validate } from './config/env.validation';
     RawMaterialsModule,
     MHRModule,
     LSRModule,
-    ShotWeightModule,
+    CalculatorsModule,
     HealthModule,
   ],
   controllers: [],

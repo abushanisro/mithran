@@ -9,3 +9,4 @@ export * from './useBOMItems';
 export * from './useMHR';
 export * from './useLSR';
 export * from './useShotWeight';
+export * from './useCalculators';

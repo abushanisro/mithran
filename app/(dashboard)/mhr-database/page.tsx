@@ -109,7 +109,7 @@ export default function MHRDatabasePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="MHR Database"
+        title="MHR"
         description="Machine Hour Rate calculations and cost analysis"
       />
 

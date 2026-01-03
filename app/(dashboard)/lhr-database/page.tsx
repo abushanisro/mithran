@@ -39,7 +39,7 @@ import { Plus, Pencil, Trash2, Search, TrendingUp, Users } from 'lucide-react';
 import { useLSR, useCreateLSR, useUpdateLSR, useDeleteLSR, useLSRStatistics } from '@/lib/api/hooks';
 import { CreateLSRDto, LSREntry } from '@/lib/api/lsr';
 
-export default function LSRDatabasePage() {
+export default function LHRDatabasePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -354,7 +354,7 @@ export default function LSRDatabasePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Labour Cost Database (LSR)"
+        title="LHR"
         description="Manage labour skill rates and hourly costs"
       />
 

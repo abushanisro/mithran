@@ -225,7 +225,7 @@ export default function MHRDetailPage() {
             </div>
             <Button variant="outline" onClick={() => router.push('/mhr-database')}>
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to MHR Database
+              Back to MHR
             </Button>
           </CardContent>
         </Card>

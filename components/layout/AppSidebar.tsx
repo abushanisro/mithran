@@ -9,7 +9,7 @@ import {
   Database,
   Calculator,
   Table,
-  Scale,
+  Sigma,
 } from 'lucide-react';
 import { NavLink } from '@/components/common/nav-link';
 import { useAuth } from '@/lib/providers/auth';
@@ -33,10 +33,10 @@ import { Separator } from '@/components/ui/separator';
 const databaseItems = [
   { title: 'Vendors', url: '/database/vendors', icon: Users },
   { title: 'Raw Materials', url: '/database/raw-materials', icon: Database },
-  { title: 'MHR Database', url: '/mhr-database', icon: Calculator },
-  { title: 'LSR Database', url: '/lsr-database', icon: Users },
-  { title: 'Shot Weight Calculator', url: '/shot-weight-calculator', icon: Scale },
-  { title: 'Lookup Tables', url: '/lookup-tables', icon: Table },
+  { title: 'MHR', url: '/mhr-database', icon: Calculator },
+  { title: 'LHR', url: '/lhr-database', icon: Users },
+  { title: 'Calculators', url: '/calculators', icon: Sigma },
+  { title: 'Process', url: '/process', icon: Table },
 ];
 
 // Materials module not yet implemented in backend - will be added in future release
