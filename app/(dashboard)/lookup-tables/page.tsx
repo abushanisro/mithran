@@ -187,25 +187,25 @@ export default function LookupTablesPage() {
   // Update row handlers
   const updateCavityPressureRow = (index: number, field: string, value: any) => {
     const updated = [...cavityPressureData];
-    updated[index] = { ...updated[index], [field]: Number(value) };
+    updated[index] = { ...updated[index], [field]: Number(value) } as typeof updated[number];
     setCavityPressureData(updated);
   };
 
   const updateViscosityRow = (index: number, field: string, value: any) => {
     const updated = [...viscosityData];
-    updated[index] = { ...updated[index], [field]: field === 'viscosity' ? Number(value) : value };
+    updated[index] = { ...updated[index], [field]: field === 'viscosity' ? Number(value) : value } as typeof updated[number];
     setViscosityData(updated);
   };
 
   const updateCavitiesRecommendationRow = (index: number, field: string, value: any) => {
     const updated = [...cavitiesRecommendationData];
-    updated[index] = { ...updated[index], [field]: field === 'cavities' ? Number(value) : value };
+    updated[index] = { ...updated[index], [field]: field === 'cavities' ? Number(value) : value } as typeof updated[number];
     setCavitiesRecommendationData(updated);
   };
 
   const updateRunnerDiaRow = (index: number, field: string, value: any) => {
     const updated = [...runnerDiaData];
-    updated[index] = { ...updated[index], [field]: value };
+    updated[index] = { ...updated[index], [field]: value } as typeof updated[number];
     setRunnerDiaData(updated);
   };
 
@@ -266,7 +266,7 @@ export default function LookupTablesPage() {
               <TableHeader>
                 <TableRow>
                   {columns.map((col) => (
-                    <TableHead key={col.key} className={col.key !== columns[0].key ? 'text-right' : ''}>
+                    <TableHead key={col.key} className={col.key !== columns[0]?.key ? 'text-right' : ''}>
                       {col.label}
                     </TableHead>
                   ))}
@@ -277,7 +277,7 @@ export default function LookupTablesPage() {
                 {data.map((row, idx) => (
                   <TableRow key={idx}>
                     {columns.map((col) => (
-                      <TableCell key={col.key} className={col.key !== columns[0].key ? 'text-right' : ''}>
+                      <TableCell key={col.key} className={col.key !== columns[0]?.key ? 'text-right' : ''}>
                         {isEditing ? (
                           <Input
                             type={col.type || 'text'}
@@ -286,7 +286,7 @@ export default function LookupTablesPage() {
                             className="h-8"
                           />
                         ) : (
-                          <span className={col.key === columns[0].key ? 'font-medium' : ''}>
+                          <span className={col.key === columns[0]?.key ? 'font-medium' : ''}>
                             {row[col.key]}
                           </span>
                         )}
@@ -637,7 +637,7 @@ export default function LookupTablesPage() {
                         {CUTTING_MACHINES.map((machine, idx) => (
                           <TableRow key={idx}>
                             <TableCell className="font-medium">{machine.type}</TableCell>
-                            <TableCell>{machine.power || machine.capacity}</TableCell>
+                            <TableCell>{(machine as any).power || (machine as any).capacity || (machine as any).pressure}</TableCell>
                             <TableCell className="text-right">{machine.maxThickness.steel}</TableCell>
                             <TableCell className="text-right">{machine.cuttingSpeed.steel}</TableCell>
                             <TableCell className="text-right">{machine.accuracy}</TableCell>
@@ -674,7 +674,7 @@ export default function LookupTablesPage() {
                           <TableRow key={idx}>
                             <TableCell className="font-medium">{proc.process}</TableCell>
                             <TableCell className="text-right">{(proc.efficiency * 100).toFixed(0)}%</TableCell>
-                            <TableCell className="text-right">{proc.weldSpeed || proc.cycleTime || '-'}</TableCell>
+                            <TableCell className="text-right">{(proc as any).weldSpeed || (proc as any).cycleTime || '-'}</TableCell>
                             <TableCell className="text-right">{proc.setupTime}</TableCell>
                             <TableCell className="text-right">₹{proc.mhr}</TableCell>
                           </TableRow>

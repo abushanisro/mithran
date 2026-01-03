@@ -9,6 +9,7 @@ import {
   Database,
   Calculator,
   Table,
+  Scale,
 } from 'lucide-react';
 import { NavLink } from '@/components/common/nav-link';
 import { useAuth } from '@/lib/providers/auth';
@@ -34,6 +35,7 @@ const databaseItems = [
   { title: 'Raw Materials', url: '/database/raw-materials', icon: Database },
   { title: 'MHR Database', url: '/mhr-database', icon: Calculator },
   { title: 'LSR Database', url: '/lsr-database', icon: Users },
+  { title: 'Shot Weight Calculator', url: '/shot-weight-calculator', icon: Scale },
   { title: 'Lookup Tables', url: '/lookup-tables', icon: Table },
 ];
 
