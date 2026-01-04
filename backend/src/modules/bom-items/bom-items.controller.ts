@@ -40,7 +40,8 @@ export class BOMItemsController {
   @ApiOperation({ summary: 'Get all BOM items' })
   @ApiResponse({ status: 200, description: 'BOM items retrieved successfully', type: BOMItemListResponseDto })
   async findAll(@Query() query: QueryBOMItemsDto, @CurrentUser() user: any, @AccessToken() token: string): Promise<BOMItemListResponseDto> {
-    return this.bomItemsService.findAll(query, user.id, token);
+    const { bomId, search, itemType, page, limit } = query;
+    return this.bomItemsService.findAll(bomId, search, itemType, page, limit, user.id, token);
   }
 
   @Get(':id')
@@ -130,7 +131,7 @@ export class BOMItemsController {
     const bomItem = await this.bomItemsService.findOne(id, user.id, token);
 
     // Get project ID from BOM
-    const projectId = await this.bomItemsService.getProjectIdFromBomItem(bomItem.bomId, token);
+    const projectId = await this.bomItemsService.getProjectIdForBOM(bomItem.bomId, token);
 
     const updateData: UpdateBOMItemDto = {};
 
@@ -217,16 +218,7 @@ export class BOMItemsController {
     return this.bomItemsService.update(id, updateData, user.id, token);
   }
 
-  @Post('fix-hierarchy/:bomId')
-  @ApiOperation({ summary: 'Automatically fix BOM item hierarchy based on item types' })
-  @ApiResponse({ status: 200, description: 'Hierarchy fixed successfully' })
-  async fixHierarchy(
-    @Param('bomId') bomId: string,
-    @CurrentUser() user: any,
-    @AccessToken() token: string,
-  ) {
-    return this.bomItemsService.fixBOMHierarchy(bomId, user.id, token);
-  }
+
 
   @Post(':id/convert-step')
   @ApiOperation({ summary: 'Manually convert STEP file to STL for 3D viewing' })
@@ -252,7 +244,7 @@ export class BOMItemsController {
     }
 
     // Get project ID from BOM
-    const projectId = await this.bomItemsService.getProjectIdFromBomItem(bomItem.bomId, token);
+    const projectId = await this.bomItemsService.getProjectIdForBOM(bomItem.bomId, token);
 
     // Download the STEP file from Supabase
     const stepUrl = await this.fileStorageService.getSignedUrl(bomItem.file3dPath, 3600);
@@ -304,21 +296,6 @@ export class BOMItemsController {
     return this.bomItemsService.update(id, updateData, user.id, token);
   }
 
-  @Put(':id/material')
-  @ApiOperation({ summary: 'Link or unlink material from BOM item' })
-  @ApiResponse({ status: 200, description: 'Material linked successfully' })
-  @ApiResponse({ status: 404, description: 'BOM item not found' })
-  async linkMaterial(
-    @Param('id') id: string,
-    @Body() body: { materialId: string | null },
-    @CurrentUser() user: any,
-    @AccessToken() token: string,
-  ): Promise<BOMItemResponseDto> {
-    // Convert null to undefined for Supabase compatibility
-    const updateData: any = {
-      materialId: body.materialId || undefined,
-    };
-    return this.bomItemsService.update(id, updateData, user.id, token);
-  }
+
 }
 

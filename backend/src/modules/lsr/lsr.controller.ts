@@ -15,6 +15,7 @@ import { LSRService } from './lsr.service';
 import { CreateLSRDto, UpdateLSRDto } from './lsr.dto';
 import { CurrentUser } from '../../common/decorators/user.decorator';
 import { AccessToken } from '../../common/decorators/access-token.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('LSR')
 @ApiBearerAuth()
@@ -36,14 +37,15 @@ export class LSRController {
   }
 
   @Get()
+  @Public()
   @ApiOperation({ summary: 'Get all LSR records with optional search' })
   @ApiResponse({ status: 200, description: 'LSR records retrieved successfully' })
   async findAll(
     @Query('search') search: string,
-    @CurrentUser() user: any,
-    @AccessToken() token: string,
+    @CurrentUser() user?: any,
+    @AccessToken() token?: string,
   ) {
-    return this.lsrService.findAll(search, user.id, token);
+    return this.lsrService.findAll(search, user?.id, token);
   }
 
   @Get('statistics')

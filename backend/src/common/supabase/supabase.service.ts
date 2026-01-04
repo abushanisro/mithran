@@ -64,4 +64,8 @@ export class SupabaseService {
     // No need to check authorized_users here - the database will enforce it
     return data.user;
   }
+
+  getAdminClient(): SupabaseClient {
+    return this.adminClient;
+  }
 }

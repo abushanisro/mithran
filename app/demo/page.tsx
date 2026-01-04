@@ -62,7 +62,7 @@ export default function DemoPage() {
               <Link href="/auth" className="flex items-center">
                 <Image
                   src="/M.svg"
-                  alt="EMITHRAN"
+                  alt="mithran"
                   width={100}
                   height={38}
                   className="h-6 w-auto"
@@ -102,7 +102,7 @@ export default function DemoPage() {
           <div className="relative z-10 text-center flex-1 flex flex-col justify-center items-center -ml-8 pt-8">
             <Image
               src="/favicon.svg"
-              alt="EMITHRAN"
+              alt="mithran"
               width={90}
               height={90}
               className="mb-8"
@@ -110,7 +110,7 @@ export default function DemoPage() {
             />
             <h2 className="text-3xl font-semibold text-foreground mb-4">Request a Demo</h2>
             <p className="text-muted-foreground text-base max-w-xs">
-              See how EMITHRAN can transform your manufacturing operations
+              See how mithran can transform your manufacturing operations
             </p>
           </div>
 
@@ -267,11 +267,11 @@ export default function DemoPage() {
       <div id="about" className="w-full bg-background border-t border-border">
         <div className="container max-w-3xl mx-auto px-8 py-16 space-y-12">
 
-          {/* About EMITHRAN */}
+          {/* About mithran */}
           <div>
-            <h2 className="text-3xl font-bold text-foreground mb-6">About EMITHRAN</h2>
+            <h2 className="text-3xl font-bold text-foreground mb-6">About mithran</h2>
             <p className="text-muted-foreground mb-4 leading-relaxed">
-              EMITHRAN is dedicated to revolutionizing the manufacturing industry by providing
+              mithran is dedicated to revolutionizing the manufacturing industry by providing
               comprehensive solutions that streamline operations, optimize costs, and enhance
               productivity across all manufacturing segments.
             </p>
@@ -314,11 +314,11 @@ export default function DemoPage() {
             <div className="space-y-4">
               <details className="group bg-card border border-border rounded-lg">
                 <summary className="cursor-pointer p-4 font-semibold text-foreground hover:text-primary transition-colors list-none flex items-center justify-between">
-                  What is EMITHRAN?
+                  What is mithran?
                   <span className="text-muted-foreground group-open:rotate-180 transition-transform">▼</span>
                 </summary>
                 <div className="px-4 pb-4 text-muted-foreground">
-                  EMITHRAN is a comprehensive manufacturing solution platform that provides cost modeling,
+                  mithran is a comprehensive manufacturing solution platform that provides cost modeling,
                   process optimization, and data analytics tools for engineering teams across all
                   manufacturing segments.
                 </div>
@@ -331,17 +331,17 @@ export default function DemoPage() {
                 </summary>
                 <div className="px-4 pb-4 text-muted-foreground">
                   Fill out the demo request form above, and our team will reach out to schedule a
-                  personalized demonstration of EMITHRAN for your business.
+                  personalized demonstration of mithran for your business.
                 </div>
               </details>
 
               <details className="group bg-card border border-border rounded-lg">
                 <summary className="cursor-pointer p-4 font-semibold text-foreground hover:text-primary transition-colors list-none flex items-center justify-between">
-                  What features does EMITHRAN offer?
+                  What features does mithran offer?
                   <span className="text-muted-foreground group-open:rotate-180 transition-transform">▼</span>
                 </summary>
                 <div className="px-4 pb-4 text-muted-foreground">
-                  EMITHRAN offers manufacturing cost modeling, real-time analytics, vendor management,
+                  mithran offers manufacturing cost modeling, real-time analytics, vendor management,
                   raw materials database, equipment tracking, BOM management, and collaborative tools.
                 </div>
               </details>
@@ -359,11 +359,11 @@ export default function DemoPage() {
 
               <details className="group bg-card border border-border rounded-lg">
                 <summary className="cursor-pointer p-4 font-semibold text-foreground hover:text-primary transition-colors list-none flex items-center justify-between">
-                  Can EMITHRAN integrate with existing systems?
+                  Can mithran integrate with existing systems?
                   <span className="text-muted-foreground group-open:rotate-180 transition-transform">▼</span>
                 </summary>
                 <div className="px-4 pb-4 text-muted-foreground">
-                  Yes, EMITHRAN integrates with existing ERP, PLM, and other manufacturing systems
+                  Yes, mithran integrates with existing ERP, PLM, and other manufacturing systems
                   through APIs and custom integrations. Contact us to discuss your requirements.
                 </div>
               </details>
@@ -378,7 +378,7 @@ export default function DemoPage() {
           <div className="mb-8">
             <Image
               src="/M.svg"
-              alt="EMITHRAN"
+              alt="mithran"
               width={140}
               height={52}
               className="h-10 w-auto mb-6"
@@ -409,7 +409,7 @@ export default function DemoPage() {
             </div>
 
             <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-              <span>© {new Date().getFullYear()} EMITHRAN. All rights reserved.</span>
+              <span>© {new Date().getFullYear()} mithran. All rights reserved.</span>
               <span>/</span>
               <a href="#" className="hover:text-primary transition-colors">Terms of Use</a>
               <span>/</span>

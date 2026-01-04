@@ -1,5 +1,5 @@
 /**
- * EMITHRAN API Client
+ * mithran API Client
  *
  * Centralized exports for all API modules
  */

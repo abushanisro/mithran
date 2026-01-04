@@ -10,6 +10,7 @@ import {
   UploadedFile,
   UseInterceptors,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
@@ -18,19 +19,23 @@ import { CreateRawMaterialDto, UpdateRawMaterialDto, QueryRawMaterialsDto } from
 import { RawMaterialResponseDto, RawMaterialListResponseDto } from './dto/raw-material-response.dto';
 import { CurrentUser } from '../../common/decorators/user.decorator';
 import { AccessToken } from '../../common/decorators/access-token.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 const XLSX = require('xlsx');
 
 @ApiTags('Raw Materials')
 @ApiBearerAuth()
 @Controller({ path: 'raw-materials', version: '1' })
 export class RawMaterialsController {
+  private readonly logger = new Logger(RawMaterialsController.name);
+
   constructor(private readonly rawMaterialsService: RawMaterialsService) { }
 
   @Get()
+  @Public()
   @ApiOperation({ summary: 'Get all raw materials' })
   @ApiResponse({ status: 200, description: 'Raw materials retrieved successfully', type: RawMaterialListResponseDto })
-  async findAll(@Query() query: QueryRawMaterialsDto, @CurrentUser() user: any, @AccessToken() token: string): Promise<RawMaterialListResponseDto> {
-    return this.rawMaterialsService.findAll(query, user.id, token);
+  async findAll(@Query() query: QueryRawMaterialsDto, @CurrentUser() user?: any, @AccessToken() token?: string): Promise<RawMaterialListResponseDto> {
+    return this.rawMaterialsService.findAll(query, user?.id, token);
   }
 
   @Get('grouped')
@@ -87,16 +92,7 @@ export class RawMaterialsController {
     @CurrentUser() user: any,
     @AccessToken() token: string,
   ): Promise<{ message: string; created: number; failed: number; errors?: any[] }> {
-    console.log('Upload request received');
-    if (file) {
-      console.log('File details:', {
-        originalname: file.originalname,
-        mimetype: file.mimetype,
-        size: file.size,
-      });
-    } else {
-      console.log('No file received in request');
-    }
+    this.logger.log(`Upload request received: ${file?.originalname || 'No file'}`, 'RawMaterialsController');
 
     if (!file) {
       throw new BadRequestException('No file provided');
@@ -142,7 +138,7 @@ export class RawMaterialsController {
               cell.toLowerCase().includes('temp'))
           );
 
-          console.log(`Row ${skipRows + 1}: Found ${validHeaders.length} material-related headers out of ${firstRow.length} columns`);
+          this.logger.debug(`Row ${skipRows + 1}: Found ${validHeaders.length} material-related headers out of ${firstRow.length} columns`, 'RawMaterialsController');
 
           // If we found at least 2 material-related headers, this is likely the header row
           if (validHeaders.length >= 2) {
@@ -154,7 +150,7 @@ export class RawMaterialsController {
       };
 
       const headerRowIndex = findHeaderRow();
-      console.log(`Using row ${headerRowIndex + 1} as header row`);
+      this.logger.debug(`Using row ${headerRowIndex + 1} as header row`, 'RawMaterialsController');
 
       // Read data with detected header row
       let jsonData = XLSX.utils.sheet_to_json(worksheet, {
@@ -184,8 +180,8 @@ export class RawMaterialsController {
 
       // Log first row for debugging column names
       if (jsonData.length > 0) {
-        console.log('Excel columns found:', Object.keys(jsonData[0]));
-        console.log('First row sample data:', JSON.stringify(jsonData[0], null, 2));
+        this.logger.debug('Excel columns found:', Object.keys(jsonData[0]), 'RawMaterialsController');
+        this.logger.debug('First row sample data:', JSON.stringify(jsonData[0], null, 2), 'RawMaterialsController');
       }
 
       // Helper function to safely get column value with multiple possible names
@@ -257,11 +253,11 @@ export class RawMaterialsController {
 
           // Log for first row to debug
           if (index === 0) {
-            console.log('DEBUG - Row 1 extracted values:');
-            console.log('  Specific Heat raw:', specificHeatRaw);
-            console.log('  Thermal Cond raw:', thermalCondRaw);
-            console.log('  Specific Heat parsed:', parseNumeric(specificHeatRaw));
-            console.log('  Thermal Cond parsed:', parseNumeric(thermalCondRaw));
+            this.logger.debug('DEBUG - Row 1 extracted values:', 'RawMaterialsController');
+            this.logger.debug(`  Specific Heat raw: ${specificHeatRaw}`, 'RawMaterialsController');
+            this.logger.debug(`  Thermal Cond raw: ${thermalCondRaw}`, 'RawMaterialsController');
+            this.logger.debug(`  Specific Heat parsed: ${parseNumeric(specificHeatRaw)}`, 'RawMaterialsController');
+            this.logger.debug(`  Thermal Cond parsed: ${parseNumeric(thermalCondRaw)}`, 'RawMaterialsController');
           }
 
           const createDto: CreateRawMaterialDto = {
@@ -294,7 +290,7 @@ export class RawMaterialsController {
 
           // Log progress every 50 rows
           if ((index + 1) % 50 === 0) {
-            console.log(`Processed ${index + 1} rows...`);
+            this.logger.debug(`Processed ${index + 1} rows...`, 'RawMaterialsController');
           }
         } catch (error) {
           // Properly serialize error with all details
@@ -324,27 +320,27 @@ export class RawMaterialsController {
         }
       }
 
-      console.log(`\n✅ Validation complete: ${validMaterials.length} valid, ${errors.length} failed`);
+      this.logger.log(`Validation complete: ${validMaterials.length} valid, ${errors.length} failed`, 'RawMaterialsController');
 
       // Batch insert all valid materials
       let created = 0;
       if (validMaterials.length > 0) {
-        console.log(`🚀 Starting batch insert of ${validMaterials.length} materials...`);
+        this.logger.log(`Starting batch insert of ${validMaterials.length} materials...`, 'RawMaterialsController');
         try {
           created = await this.rawMaterialsService.createBatch(validMaterials, user.id, token);
-          console.log(`✅ Batch insert complete: ${created} materials created`);
+          this.logger.log(`Batch insert complete: ${created} materials created`, 'RawMaterialsController');
         } catch (error) {
-          console.error(`❌ Batch insert failed:`, error.message);
+          this.logger.error(`Batch insert failed: ${error.message}`, 'RawMaterialsController');
           throw new BadRequestException(`Batch insert failed: ${error.message}`);
         }
       }
 
       const failed = errors.length;
 
-      console.log(`\n✅ Upload complete: ${created} created, ${failed} failed out of ${jsonData.length} total rows`);
+      this.logger.log(`Upload complete: ${created} created, ${failed} failed out of ${jsonData.length} total rows`, 'RawMaterialsController');
 
       if (failed > 0) {
-        console.log(`Failed rows: ${errors.map(e => e.row).join(', ')}`);
+        this.logger.debug(`Failed rows: ${errors.map(e => e.row).join(', ')}`, 'RawMaterialsController');
       }
 
       return {

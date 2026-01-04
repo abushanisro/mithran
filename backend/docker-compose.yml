@@ -1,4 +1,4 @@
-# Docker Compose for EMITHRAN Backend
+# Docker Compose for mithran Backend
 # SECURITY: All credentials must be set via environment variables
 # Create a .env file in the backend directory with your credentials
 
@@ -8,7 +8,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    container_name: EMITHRAN-api-gateway
+    container_name: mithran-api-gateway
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: ${PORT:-4000}
@@ -28,17 +28,17 @@ services:
       - /app/node_modules
       - ./logs:/app/logs
     networks:
-      - EMITHRAN-network
+      - mithran-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:4000/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
 
 networks:
-  EMITHRAN-network:
+  mithran-network:
     driver: bridge
     ipam:
       config:

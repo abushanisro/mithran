@@ -107,9 +107,27 @@ export function useUpdateCalculator() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateCalculatorData }) =>
       calculatorsApi.update(id, data),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: calculatorKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: calculatorKeys.detail(variables.id) });
+    onSuccess: (updatedCalculator, variables) => {
+      // Immediately update all list caches with the new data
+      queryClient.setQueriesData(
+        { queryKey: calculatorKeys.lists() },
+        (oldData: any) => {
+          if (!oldData) return oldData;
+          return {
+            ...oldData,
+            calculators: oldData.calculators.map((calc: any) =>
+              calc.id === variables.id ? updatedCalculator : calc
+            ),
+          };
+        }
+      );
+
+      // Update detail cache
+      queryClient.setQueryData(
+        calculatorKeys.detail(variables.id),
+        updatedCalculator
+      );
+
       toast.success('Calculator updated successfully');
     },
     onError: (error: ApiError) => {

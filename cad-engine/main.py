@@ -4,7 +4,7 @@ CAD Engine - STEP to STL Conversion Service
 Professional implementation using OpenCascade (pythonocc-core)
 Refactored with clean code principles, SOLID design, and security best practices
 
-Author: EMITHRAN Platform
+Author: mithran Platform
 Standards: ISO 10303 (STEP), STL Binary Format
 """
 
@@ -114,7 +114,7 @@ async def lifespan(app: FastAPI):
 # ============================================================================
 
 app = FastAPI(
-    title="EMITHRAN CAD Engine",
+    title="mithran CAD Engine",
     description="Professional STEP to STL conversion service with security and rate limiting",
     version="2.0.0",
     lifespan=lifespan
@@ -162,7 +162,7 @@ def cleanup_files(*file_paths):
 async def root() -> Dict:
     """Root endpoint - service information"""
     return {
-        "service": "EMITHRAN CAD Engine",
+        "service": "mithran CAD Engine",
         "status": "running",
         "version": "2.0.0",
         "engine": "OpenCascade Technology (OCCT)",

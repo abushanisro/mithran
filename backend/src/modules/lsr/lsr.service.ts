@@ -53,7 +53,7 @@ export class LSRService {
     return this.mapDatabaseToResponse(data);
   }
 
-  async findAll(search: string | undefined, userId: string, accessToken: string) {
+  async findAll(search: string | undefined, userId?: string, accessToken?: string) {
     this.logger.log('Fetching all LSR records', 'LSRService');
 
     let queryBuilder = this.supabaseService

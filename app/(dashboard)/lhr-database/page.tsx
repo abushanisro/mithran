@@ -99,17 +99,7 @@ export default function LHRDatabasePage() {
     location: '',
   });
 
-  // Check if labour code already exists (for real-time validation)
-  const isDuplicateLabourCode = React.useMemo(() => {
-    const trimmedCode = formData.labourCode.trim();
-    if (!trimmedCode) return false;
 
-    return lsrEntries.some(entry => {
-      // For edit mode, exclude the current entry being edited
-      if (editingEntry && entry.id === editingEntry.id) return false;
-      return entry.labourCode.toLowerCase() === trimmedCode.toLowerCase();
-    });
-  }, [formData.labourCode, lsrEntries, editingEntry]);
 
   // Save draft to localStorage whenever form data changes
   useEffect(() => {
@@ -139,7 +129,7 @@ export default function LHRDatabasePage() {
   // Handle daily wage change - auto-calculate monthly wage
   const handleDailyWageChange = (value: string) => {
     if (value === '') {
-      setFormData(prev => ({ ...prev, minimumWagePerDay: '', minimumWagePerMonth: '' }));
+      setFormData(prev => ({ ...prev, minimumWagePerDay: 0, minimumWagePerMonth: 0 }));
     } else {
       const dailyWage = parseFloat(value);
       if (!isNaN(dailyWage)) {

@@ -1,12 +1,12 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { CalculatorsController } from './calculators.controller';
-import { CalculatorsService } from './calculators.service';
+import { CalculatorsServiceV2 } from './calculators.service';
 import { SupabaseService } from '../../common/supabase/supabase.service';
 import { Logger } from '../../common/logger/logger.service';
 
 @Module({
   controllers: [CalculatorsController],
-  providers: [CalculatorsService, SupabaseService, Logger],
-  exports: [CalculatorsService],
+  providers: [CalculatorsServiceV2, SupabaseService, Logger],
+  exports: [CalculatorsServiceV2],
 })
 export class CalculatorsModule {}

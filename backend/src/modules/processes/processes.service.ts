@@ -11,7 +11,7 @@ export class ProcessesService {
     private readonly logger: Logger,
   ) {}
 
-  async findAll(query: QueryProcessesDto, userId: string, accessToken: string): Promise<ProcessListResponseDto> {
+  async findAll(query: QueryProcessesDto, userId?: string, accessToken?: string): Promise<ProcessListResponseDto> {
     this.logger.log('Fetching all processes', 'ProcessesService');
 
     const page = query.page || 1;

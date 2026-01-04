@@ -1,6 +1,6 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, Inject, forwardRef } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { CalculatorsService } from './calculators.service';
+import { CalculatorsServiceV2 } from './calculators.service';
 import { CurrentUser } from '../../common/decorators/user.decorator';
 import { AccessToken } from '../../common/decorators/access-token.decorator';
 import { CreateCalculatorDto, UpdateCalculatorDto, QueryCalculatorDto, ExecuteCalculatorDto } from './dto/calculator.dto';
@@ -9,7 +9,10 @@ import { CreateCalculatorDto, UpdateCalculatorDto, QueryCalculatorDto, ExecuteCa
 @ApiBearerAuth()
 @Controller({ path: 'calculators', version: '1' })
 export class CalculatorsController {
-  constructor(private readonly calculatorsService: CalculatorsService) { }
+  constructor(
+    @Inject(forwardRef(() => CalculatorsServiceV2))
+    private readonly calculatorsService: CalculatorsServiceV2
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Get all calculators' })
@@ -79,4 +82,5 @@ export class CalculatorsController {
   ) {
     return this.calculatorsService.execute(id, dto, user.id, token);
   }
+
 }

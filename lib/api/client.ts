@@ -1,5 +1,5 @@
 /**
- * API Client for EMITHRAN Microservices
+ * API Client for mithran Microservices
  *
  * Production-grade API client with:
  * - Automatic retry with exponential backoff

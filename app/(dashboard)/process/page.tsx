@@ -746,7 +746,7 @@ export default function ProcessPage() {
                         {GRINDING_MACHINES.map((machine, idx) => (
                           <TableRow key={idx}>
                             <TableCell className="font-medium">{machine.type}</TableCell>
-                            <TableCell>{machine.tableSize || machine.capacity}</TableCell>
+                            <TableCell>{(machine as any).tableSize || '-'}</TableCell>
                             <TableCell className="text-right">{machine.accuracy}</TableCell>
                             <TableCell className="text-right">{machine.surfaceFinish}</TableCell>
                             <TableCell className="text-right">{machine.cycleTime}</TableCell>
@@ -819,7 +819,7 @@ export default function ProcessPage() {
                         {FINISHING_PROCESSES.map((proc, idx) => (
                           <TableRow key={idx}>
                             <TableCell className="font-medium">{proc.process}</TableCell>
-                            <TableCell>{proc.thickness || '-'}</TableCell>
+                            <TableCell>{(proc as any).thickness || '-'}</TableCell>
                             <TableCell className="text-right">{proc.cycleTime}</TableCell>
                             <TableCell className="text-right">₹{proc.costPerSqm}</TableCell>
                             <TableCell className="text-right">₹{proc.setupCost}</TableCell>

@@ -14,6 +14,7 @@ import { CreateProcessDto, UpdateProcessDto, QueryProcessesDto } from './dto/pro
 import { ProcessResponseDto, ProcessListResponseDto } from './dto/process-response.dto';
 import { CurrentUser } from '../../common/decorators/user.decorator';
 import { AccessToken } from '../../common/decorators/access-token.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('Processes')
 @ApiBearerAuth()
@@ -22,10 +23,11 @@ export class ProcessesController {
   constructor(private readonly processesService: ProcessesService) {}
 
   @Get()
+  @Public()
   @ApiOperation({ summary: 'Get all processes' })
   @ApiResponse({ status: 200, description: 'Processes retrieved successfully', type: ProcessListResponseDto })
-  async findAll(@Query() query: QueryProcessesDto, @CurrentUser() user: any, @AccessToken() token: string): Promise<ProcessListResponseDto> {
-    return this.processesService.findAll(query, user.id, token);
+  async findAll(@Query() query: QueryProcessesDto, @CurrentUser() user?: any, @AccessToken() token?: string): Promise<ProcessListResponseDto> {
+    return this.processesService.findAll(query, user?.id, token);
   }
 
   @Get(':id')

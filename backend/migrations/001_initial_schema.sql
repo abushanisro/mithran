@@ -1,4 +1,4 @@
--- EMITHRAN Platform - Initial Database Schema
+-- mithran Platform - Initial Database Schema
 -- This migration creates all tables required for the manufacturing One-Stop Solution
 -- Run this in your Supabase SQL Editor
 

@@ -37,7 +37,7 @@ CREATE POLICY "Service role can manage authorized users"
 
 -- Insert existing user if needed (replace with your email)
 -- INSERT INTO authorized_users (email, full_name, role)
--- VALUES ('emuski@EMITHRAN.com', 'Emuski', 'admin')
+-- VALUES ('emuski@mithran.com', 'Emuski', 'admin')
 -- ON CONFLICT (email) DO NOTHING;
 
 COMMENT ON TABLE authorized_users IS 'Whitelist of users authorized to access the application. Users must be in this table to sign in.';

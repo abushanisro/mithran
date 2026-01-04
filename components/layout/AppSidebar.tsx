@@ -31,8 +31,8 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 
 const databaseItems = [
-  { title: 'Vendors', url: '/database/vendors', icon: Users },
-  { title: 'Raw Materials', url: '/database/raw-materials', icon: Database },
+  { title: 'Vendors', url: '/vendors', icon: Users },
+  { title: 'Raw Materials', url: '/raw-materials', icon: Database },
   { title: 'MHR', url: '/mhr-database', icon: Calculator },
   { title: 'LHR', url: '/lhr-database', icon: Users },
   { title: 'Calculators', url: '/calculators', icon: Sigma },
@@ -65,7 +65,7 @@ export function AppSidebar() {
         <div className="flex items-center gap-3">
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              <h2 className="font-bold text-lg text-sidebar-foreground tracking-tight">EMITHRAN</h2>
+              <h2 className="font-bold text-lg text-sidebar-foreground tracking-tight">mithran</h2>
               <p className="text-xs text-sidebar-foreground/50">One-Stop Solution</p>
             </div>
           )}

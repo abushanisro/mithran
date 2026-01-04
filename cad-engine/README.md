@@ -1,4 +1,4 @@
-# EMITHRAN CAD Engine
+# mithran CAD Engine
 
 Professional STEP to STL conversion service using OpenCascade Technology (OCCT).
 
@@ -31,7 +31,7 @@ Health check and service info
 **Response:**
 ```json
 {
-  "service": "EMITHRAN CAD Engine",
+  "service": "mithran CAD Engine",
   "status": "running",
   "version": "1.0.0",
   "engine": "OpenCascade Technology (OCCT)"
@@ -107,12 +107,12 @@ python main.py
 
 ### Build
 ```bash
-docker build -t EMITHRAN-cad-engine .
+docker build -t mithran-cad-engine .
 ```
 
 ### Run
 ```bash
-docker run -p 5000:5000 EMITHRAN-cad-engine
+docker run -p 5000:5000 mithran-cad-engine
 ```
 
 ### Using docker-compose
@@ -145,4 +145,4 @@ Follows CAD industry best practices:
 
 ## License
 
-Professional implementation for EMITHRAN Platform.
+Professional implementation for mithran Platform.

@@ -10,7 +10,7 @@ import { apiClient } from './client';
 // ========================================
 
 export type CalculatorType = 'single' | 'multi_step' | 'dashboard';
-export type FieldType = 'number' | 'text' | 'select' | 'database_lookup' | 'calculated' | 'multi_select';
+export type FieldType = 'number' | 'text' | 'select' | 'database_lookup' | 'calculated' | 'multi_select' | 'const';
 export type DataSource = 'lhr' | 'mhr' | 'raw_materials' | 'processes' | 'manual';
 export type FormulaType = 'expression' | 'multi_step' | 'conditional';
 export type DisplayFormat = 'number' | 'currency' | 'percentage';
@@ -289,7 +289,8 @@ export const calculatorsApi = {
   },
 
   createField: async (data: CreateFieldData): Promise<CalculatorField> => {
-    return apiClient.post<CalculatorField>(`/calculators/${data.calculatorId}/fields`, data);
+    const { calculatorId, ...fieldData } = data;
+    return apiClient.post<CalculatorField>(`/calculators/${calculatorId}/fields`, fieldData);
   },
 
   updateField: async (calculatorId: string, fieldId: string, data: UpdateFieldData): Promise<CalculatorField> => {
@@ -306,7 +307,8 @@ export const calculatorsApi = {
   },
 
   createFormula: async (data: CreateFormulaData): Promise<CalculatorFormula> => {
-    return apiClient.post<CalculatorFormula>(`/calculators/${data.calculatorId}/formulas`, data);
+    const { calculatorId, ...formulaData } = data;
+    return apiClient.post<CalculatorFormula>(`/calculators/${calculatorId}/formulas`, formulaData);
   },
 
   updateFormula: async (calculatorId: string, formulaId: string, data: UpdateFormulaData): Promise<CalculatorFormula> => {
@@ -323,7 +325,8 @@ export const calculatorsApi = {
 
   // Execution
   execute: async (data: ExecuteCalculatorData): Promise<ExecutionResult> => {
-    return apiClient.post<ExecutionResult>(`/calculators/${data.calculatorId}/execute`, data);
+    const { calculatorId, ...executeData } = data;
+    return apiClient.post<ExecutionResult>(`/calculators/${calculatorId}/execute`, executeData);
   },
 
   saveExecution: async (data: SaveExecutionData): Promise<CalculatorExecution> => {

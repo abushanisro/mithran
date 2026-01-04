@@ -88,7 +88,7 @@ async function bootstrap() {
   );
 
   const config = new DocumentBuilder()
-    .setTitle('EMITHRAN API Gateway')
+    .setTitle('mithran API Gateway')
     .setDescription('Manufacturing One-Stop Solution - API Gateway')
     .setVersion('1.0')
     .addBearerAuth()

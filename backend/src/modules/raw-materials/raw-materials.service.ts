@@ -11,7 +11,7 @@ export class RawMaterialsService {
     private readonly logger: Logger,
   ) {}
 
-  async findAll(query: QueryRawMaterialsDto, userId: string, accessToken: string): Promise<RawMaterialListResponseDto> {
+  async findAll(query: QueryRawMaterialsDto, userId?: string, accessToken?: string): Promise<RawMaterialListResponseDto> {
     this.logger.log('Fetching all raw materials', 'RawMaterialsService');
 
     let queryBuilder = this.supabaseService

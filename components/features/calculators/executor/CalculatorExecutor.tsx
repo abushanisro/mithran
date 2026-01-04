@@ -167,21 +167,34 @@ export function CalculatorExecutor({ calculatorId }: CalculatorExecutorProps) {
       </Card>
 
       {/* Results */}
-      {results && (
+      {results && calculator.formulas && calculator.formulas.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Results</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {Object.entries(results).map(([key, value]) => (
-                <div key={key} className="flex justify-between items-center py-2 px-3 bg-muted/50 rounded">
-                  <span className="font-medium">{key}:</span>
-                  <span className="text-lg font-bold">
-                    {typeof value === 'object' ? value.value : value}
-                  </span>
-                </div>
-              ))}
+              {calculator.formulas
+                .filter((formula) => formula.displayInResults !== false)
+                .map((formula) => {
+                  const value = results[formula.id] ?? results[formula.formulaName];
+                  if (value === undefined) return null;
+
+                  const displayValue = typeof value === 'object' ? value.value : value;
+                  const formattedValue = typeof displayValue === 'number'
+                    ? displayValue.toFixed(formula.decimalPlaces ?? 2)
+                    : displayValue;
+
+                  return (
+                    <div key={formula.id} className="flex justify-between items-center py-3 px-4 bg-muted/50 rounded-lg">
+                      <span className="font-medium text-base">{formula.displayLabel || formula.formulaName}:</span>
+                      <span className="text-xl font-bold">
+                        {formattedValue}
+                        {formula.outputUnit && <span className="text-sm text-muted-foreground ml-2">{formula.outputUnit}</span>}
+                      </span>
+                    </div>
+                  );
+                })}
             </div>
           </CardContent>
         </Card>

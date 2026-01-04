@@ -62,7 +62,7 @@ export class MHRService {
     }
   }
 
-  async findAll(query: QueryMHRDto, userId: string, accessToken: string): Promise<MHRListResponseDto> {
+  async findAll(query: QueryMHRDto, userId?: string, accessToken?: string): Promise<MHRListResponseDto> {
     this.logger.log('Fetching all MHR records', 'MHRService');
 
     const page = query.page || 1;
