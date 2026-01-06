@@ -116,7 +116,7 @@ This will:
 
 Expected output:
 ```
-🚀 Starting migration process...
+Starting migration process...
 
 📊 Database: postgres
 🏠 Host: db.xxxxx.supabase.co

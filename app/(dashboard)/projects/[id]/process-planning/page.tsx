@@ -12,13 +12,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { RotateCcw, Save, Calculator, ChevronRight, ChevronDown } from 'lucide-react';
+import { RotateCcw, Save, Calculator, ChevronRight, ChevronDown, Database } from 'lucide-react';
 import { useBOMs } from '@/lib/api/hooks/useBOM';
 import { useBOMItems } from '@/lib/api/hooks/useBOMItems';
 import { ModelViewer } from '@/components/ui/model-viewer';
 import { apiClient } from '@/lib/api/client';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+
+// Available fields that can be extracted from reference tables and BOM data
+const EXTRACTABLE_FIELDS = [
+  { value: 'part_weight', label: 'Part Weight', category: 'Part Info' },
+  { value: 'annual_volume', label: 'Annual Volume', category: 'Part Info' },
+  { value: 'material_grade', label: 'Material Grade', category: 'Material' },
+  { value: 'surface_area', label: 'Surface Area', category: 'Dimensions' },
+  { value: 'max_length', label: 'Max Length', category: 'Dimensions' },
+  { value: 'max_width', label: 'Max Width', category: 'Dimensions' },
+  { value: 'max_height', label: 'Max Height', category: 'Dimensions' },
+  { value: 'flow_path_ratio', label: 'Flow Path Ratio', category: 'Process Data' },
+  { value: 'cavity_pressure', label: 'Cavity Pressure', category: 'Process Data' },
+  { value: 'viscosity', label: 'Material Viscosity', category: 'Material' },
+  { value: 'runner_diameter', label: 'Runner Diameter', category: 'Process Data' },
+  { value: 'shot_weight', label: 'Shot Weight', category: 'Machine' },
+  { value: 'cycle_time', label: 'Cycle Time', category: 'Machine' },
+  { value: 'mhr', label: 'Machine Hour Rate', category: 'Machine' },
+];
 
 export default function ProcessPlanningPage() {
   const params = useParams();
@@ -28,6 +46,12 @@ export default function ProcessPlanningPage() {
   const [file3dUrl, setFile3dUrl] = useState<string | null>(null);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const hasExpandedRef = useRef(false);
+
+  // State to store extracted fields for each process step (indexed by process route index)
+  const [extractedFields, setExtractedFields] = useState<Record<number, string>>({});
+
+  // State to store extracted values for use in calculations
+  const [extractedValues, setExtractedValues] = useState<Record<number, any>>({});
 
   const { data: bomsData } = useBOMs({ projectId });
   const boms = bomsData?.boms || [];
@@ -110,6 +134,40 @@ export default function ProcessPlanningPage() {
         return 'Part';
       default:
         return type;
+    }
+  };
+
+  // Handler to update extracted field selection
+  const handleFieldExtractionChange = (processIndex: number, fieldValue: string) => {
+    setExtractedFields(prev => ({
+      ...prev,
+      [processIndex]: fieldValue
+    }));
+
+    // Auto-extract value from BOM data or process data
+    if (fieldValue && selectedItem) {
+      let extractedValue: any = null;
+
+      // Map field values to actual data properties
+      switch (fieldValue) {
+        case 'annual_volume':
+          extractedValue = selectedItem.annualVolume;
+          break;
+        case 'material_grade':
+          extractedValue = selectedItem.materialGrade;
+          break;
+        case 'part_weight':
+          extractedValue = selectedItem.weight;
+          break;
+        // Add more mappings as needed
+        default:
+          extractedValue = selectedItem[fieldValue];
+      }
+
+      setExtractedValues(prev => ({
+        ...prev,
+        [processIndex]: extractedValue
+      }));
     }
   };
 
@@ -338,6 +396,7 @@ export default function ProcessPlanningPage() {
                     <th className="px-3 py-2.5 text-left text-xs font-semibold border-r border-border">Operations</th>
                     <th className="px-3 py-2.5 text-left text-xs font-semibold border-r border-border">Calculator</th>
                     <th className="px-3 py-2.5 text-left text-xs font-semibold border-r border-border">Equipment</th>
+                    <th className="px-3 py-2.5 text-left text-xs font-semibold border-r border-border">Extract Field</th>
                     <th className="px-3 py-2.5 text-left text-xs font-semibold">DFM Remarks</th>
                   </tr>
                 </thead>
@@ -373,6 +432,51 @@ export default function ProcessPlanningPage() {
                       <td className="px-3 py-2.5 text-sm border-r border-border">
                         {route.equipment}
                       </td>
+                      <td className="px-3 py-2 border-r border-border">
+                        <div className="space-y-2">
+                          <Select
+                            value={extractedFields[index] || ''}
+                            onValueChange={(value) => handleFieldExtractionChange(index, value)}
+                          >
+                            <SelectTrigger className="h-8 text-sm w-full">
+                              <SelectValue placeholder="Select field (optional)">
+                                {extractedFields[index] ? (
+                                  <span className="flex items-center gap-1.5">
+                                    <Database className="h-3 w-3 text-primary" />
+                                    {EXTRACTABLE_FIELDS.find(f => f.value === extractedFields[index])?.label}
+                                  </span>
+                                ) : (
+                                  'Select field'
+                                )}
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="">None</SelectItem>
+                              {EXTRACTABLE_FIELDS.reduce((acc, field) => {
+                                const lastCategory = acc.length > 0 ? acc[acc.length - 1].category : null;
+                                if (lastCategory !== field.category) {
+                                  acc.push(
+                                    <div key={`category-${field.category}`} className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-secondary/50">
+                                      {field.category}
+                                    </div>
+                                  );
+                                }
+                                acc.push(
+                                  <SelectItem key={field.value} value={field.value}>
+                                    {field.label}
+                                  </SelectItem>
+                                );
+                                return acc;
+                              }, [] as React.ReactNode[])}
+                            </SelectContent>
+                          </Select>
+                          {extractedValues[index] !== undefined && extractedValues[index] !== null && (
+                            <div className="text-xs text-muted-foreground bg-secondary/30 px-2 py-1 rounded border border-primary/20">
+                              <span className="font-semibold text-primary">Value:</span> {extractedValues[index]}
+                            </div>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-3 py-2.5 text-sm">
                         <Input className="h-8 text-sm" placeholder="-" />
                       </td>
@@ -383,18 +487,84 @@ export default function ProcessPlanningPage() {
             </div>
           </div>
 
+          {/* Extracted Data Summary */}
+          {Object.keys(extractedValues).length > 0 && (
+            <div className="mt-4 p-4 bg-secondary/30 border border-primary/20 rounded-lg">
+              <div className="flex items-center gap-2 mb-3">
+                <Database className="h-4 w-4 text-primary" />
+                <h4 className="text-sm font-semibold text-foreground">Extracted Data for Calculations</h4>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {Object.entries(extractedValues).map(([processIndex, value]) => {
+                  const fieldKey = extractedFields[Number(processIndex)];
+                  const field = EXTRACTABLE_FIELDS.find(f => f.value === fieldKey);
+                  const process = processRoutes[Number(processIndex)];
+
+                  if (!field || value === undefined || value === null) return null;
+
+                  return (
+                    <div
+                      key={processIndex}
+                      className="p-2.5 bg-card border border-border rounded-md"
+                    >
+                      <div className="text-xs text-muted-foreground mb-0.5">{process.processRoute}</div>
+                      <div className="text-xs font-medium text-foreground">{field.label}</div>
+                      <div className="text-sm font-bold text-primary mt-1">{value}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-end gap-3 mt-4">
-            <Button variant="destructive" size="lg" className="gap-2 px-6">
+            <Button
+              variant="destructive"
+              size="lg"
+              className="gap-2 px-6"
+              onClick={() => {
+                setExtractedFields({});
+                setExtractedValues({});
+              }}
+            >
               <RotateCcw className="h-4 w-4" />
               Reset
             </Button>
-            <Button size="lg" className="gap-2 px-6 bg-primary hover:bg-primary/90 text-primary-foreground">
+            <Button
+              size="lg"
+              className="gap-2 px-6 bg-primary hover:bg-primary/90 text-primary-foreground"
+              onClick={() => {
+                // Save process planning data including extracted fields
+                const planningData = {
+                  partNumber: selectedPartNumber,
+                  pp: selectedPP,
+                  extractedFields,
+                  extractedValues,
+                  processRoutes,
+                };
+                console.log('Saving process planning:', planningData);
+                // TODO: Implement save API call
+              }}
+            >
               <Save className="h-4 w-4" />
               Save
             </Button>
-            <Button size="lg" className="gap-2 px-6 bg-warning hover:bg-warning/90 text-warning-foreground">
+            <Button
+              size="lg"
+              className="gap-2 px-6 bg-warning hover:bg-warning/90 text-warning-foreground"
+              onClick={() => {
+                // Calculate using extracted values
+                console.log('Calculating with extracted data:', extractedValues);
+                // TODO: Implement calculation logic
+              }}
+            >
               <Calculator className="h-4 w-4" />
               Calculate
+              {Object.keys(extractedValues).length > 0 && (
+                <Badge className="ml-2 bg-warning-foreground text-warning">
+                  {Object.keys(extractedValues).length}
+                </Badge>
+              )}
             </Button>
           </div>
         </div>

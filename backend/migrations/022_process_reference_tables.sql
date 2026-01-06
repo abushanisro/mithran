@@ -243,7 +243,7 @@ FROM (VALUES
   ('≤ 50', '4'),
   ('≤ 100', '5'),
   ('≤ 250', '6'),
-  ('Above 250', '7-9')
+  ('> 250', '7-9')
 ) AS data(part_weight, runner_diameter)
 WHERE EXISTS (SELECT 1 FROM runner_table);
 

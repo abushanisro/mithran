@@ -17,7 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { AlertCircle, CheckCircle2, Info, Lightbulb } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Info } from 'lucide-react';
 import { validateFormula, getAutocompleteSuggestions } from '@/lib/formula/validator';
 import { FORMULA_FUNCTIONS, type FormulaFunction } from '@/lib/formula/functions';
 import { cn } from '@/lib/utils';
@@ -25,10 +25,11 @@ import { cn } from '@/lib/utils';
 type FormulaEditorProps = {
   value: string;
   onChange: (value: string) => void;
-  availableFields: Array<{ name: string; type: string }>;
+  availableFields: Array<{ id?: string; name: string; type: string; label?: string }>;
   availableFormulas?: Array<{ name: string }>;
   placeholder?: string;
   showHelp?: boolean;
+  disabled?: boolean;
 };
 
 export function FormulaEditor({
@@ -36,8 +37,9 @@ export function FormulaEditor({
   onChange,
   availableFields,
   availableFormulas = [],
-  placeholder = 'e.g., {field1} * {field2} + 100',
+  placeholder = 'e.g., {volume} * {density} + 100',
   showHelp = true,
+  disabled = false,
 }: FormulaEditorProps) {
   const [cursorPosition, setCursorPosition] = useState(0);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -45,7 +47,9 @@ export function FormulaEditor({
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
-  const fieldNames = availableFields.map(f => f.name);
+  const fieldNames = availableFields
+    .filter(f => f.name && f.name.trim() !== '')
+    .map(f => f.name);
   const validation = validateFormula(value, fieldNames);
   const suggestions = getAutocompleteSuggestions(value, cursorPosition, fieldNames);
 
@@ -185,8 +189,7 @@ export function FormulaEditor({
           {showHelp && (
             <Popover open={showFunctionHelp} onOpenChange={setShowFunctionHelp}>
               <PopoverTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-6 px-2">
-                  <Lightbulb className="h-3 w-3 mr-1" />
+                <Button variant="ghost" size="sm" className="h-6 px-2" disabled={disabled}>
                   <span className="text-xs">Functions</span>
                 </Button>
               </PopoverTrigger>
@@ -253,8 +256,10 @@ export function FormulaEditor({
             onClick={handleCursorChange}
             onBlur={handleBlur}
             placeholder={placeholder}
+            disabled={disabled}
             className={cn(
               'font-mono text-sm',
+              disabled ? "bg-secondary/20" : "bg-primary/5 border-primary/10",
               validation.errors.length > 0 && 'border-destructive focus-visible:ring-destructive',
               validation.isValid && value && 'border-green-500 focus-visible:ring-green-500'
             )}
@@ -323,39 +328,41 @@ export function FormulaEditor({
         <p className="text-xs text-muted-foreground">
           Use <code className="px-1 py-0.5 bg-muted rounded">{'{fieldName}'}</code> for fields,{' '}
           <code className="px-1 py-0.5 bg-muted rounded">FUNCTION()</code> for functions.{' '}
-          Examples: <code className="px-1 py-0.5 bg-muted rounded">SUM({'{a}'}, {'{b}'})</code>,{' '}
-          <code className="px-1 py-0.5 bg-muted rounded">IF({'{qty}'} {'>'} 100, {'{price}'} * 0.9, {'{price}'})</code>
+          Examples: <code className="px-1 py-0.5 bg-muted rounded">SUM({'{volume}'}, {'{weight}'})</code>,{' '}
+          <code className="px-1 py-0.5 bg-muted rounded">IF({'{quantity}'} {'>'} 100, {'{price}'} * 0.9, {'{price}'})</code>
         </p>
       </div>
 
       {/* Quick Insert Dropdowns */}
       <div className="grid grid-cols-2 gap-2">
         {/* Fields Dropdown */}
-        <div className="space-y-1">
-          <Label className="text-[10px] text-muted-foreground">Available Fields</Label>
+        <div>
           <Select
             value=""
+            disabled={disabled}
             onValueChange={(fieldName) => {
               if (fieldName) {
                 insertField(fieldName);
               }
             }}
           >
-            <SelectTrigger className="h-9 text-xs">
+            <SelectTrigger className={cn("h-9 text-xs", disabled ? "bg-secondary/20" : "bg-primary/5 border-primary/10")}>
               <SelectValue placeholder={availableFields.length > 0 ? "+ Insert Field" : "No fields"} />
             </SelectTrigger>
             <SelectContent>
               {availableFields.length > 0 ? (
-                availableFields.map((field) => (
-                  <SelectItem key={field.name} value={field.name}>
-                    <div className="flex items-center gap-2">
-                      <code className="font-mono text-xs">{`{${field.name}}`}</code>
-                      <Badge variant="outline" className="text-[10px]">{field.type}</Badge>
-                    </div>
-                  </SelectItem>
-                ))
+                availableFields
+                  .filter((field) => field.name && field.name.trim() !== '')
+                  .map((field) => (
+                    <SelectItem key={field.id || field.name} value={field.name}>
+                      <span className="text-xs">{field.label || field.name}</span>
+                    </SelectItem>
+                  ))
               ) : (
                 <SelectItem value="_none" disabled>No fields available</SelectItem>
+              )}
+              {availableFields.length > 0 && availableFields.filter((field) => field.name && field.name.trim() !== '').length === 0 && (
+                <SelectItem value="_none" disabled>No fields with labels yet</SelectItem>
               )}
             </SelectContent>
           </Select>
@@ -364,7 +371,7 @@ export function FormulaEditor({
         {/* Common Functions */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="w-full justify-start text-xs">
+            <Button variant="outline" size="sm" className={cn("w-full justify-start text-xs", disabled ? "bg-secondary/20" : "bg-primary/5 border-primary/10")} disabled={disabled}>
               <span className="mr-2">ƒ</span> Insert Function
             </Button>
           </PopoverTrigger>
@@ -394,11 +401,16 @@ export function FormulaEditor({
           {validation.fields.length > 0 && (
             <div className="flex items-center gap-1">
               <span className="text-xs text-muted-foreground">Fields:</span>
-              {validation.fields.map((field) => (
-                <Badge key={field} variant="default" className="text-xs">
-                  {field}
-                </Badge>
-              ))}
+              {validation.fields
+                .filter(fieldName => fieldName && fieldName.trim() !== '')
+                .map((fieldName, idx) => {
+                  const field = availableFields.find(f => f.name === fieldName);
+                  return (
+                    <Badge key={`${fieldName}-${idx}`} variant="default" className="text-xs">
+                      {field?.label || fieldName}
+                    </Badge>
+                  );
+                })}
             </div>
           )}
 

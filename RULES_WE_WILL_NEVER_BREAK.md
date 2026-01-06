@@ -1,4 +1,4 @@
-# 🚨 RULES WE WILL NEVER BREAK AGAIN
+# RULES WE WILL NEVER BREAK AGAIN
 
 ## Enterprise Calculator System - Iron-Clad Rules
 
@@ -8,17 +8,17 @@ Author: Principal Software Engineer Team
 
 ---
 
-## 📜 The 10 Commandments
+## The 10 Commandments
 
-### 1️⃣ DATABASE IS THE ONLY SOURCE OF TRUTH
+### DATABASE IS THE ONLY SOURCE OF TRUTH
 
 **Rule**: React state is a cache, not authoritative.
 
 ```typescript
-// ❌ FORBIDDEN
+// FORBIDDEN
 const [calculator, setCalculator] = useState(localStorageData) // WRONG!
 
-// ✅ REQUIRED
+// EQUIRED
 const { data: calculator } = useQuery(['calculator', id], fetchFromDB)
 ```
 

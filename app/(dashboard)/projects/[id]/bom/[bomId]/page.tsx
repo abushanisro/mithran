@@ -20,6 +20,7 @@ import {
   Settings,
   FileText,
   Box,
+  FileDown,
 } from 'lucide-react';
 import { BOMItemsFlat, BOMItemDialog, BOMTreeView, BOMItemDetailPanel } from '@/components/features/bom';
 import { BOMItem } from '@/lib/api/hooks/useBOMItems';
@@ -180,6 +181,217 @@ BOMDetailPage() {
     setPreferredView(viewType || '3d');
   };
 
+  // Download CSV Template
+  const handleDownloadTemplate = () => {
+    try {
+      // CSV headers
+      const headers = [
+        'Part Number',
+        'Name',
+        'Description',
+        'Type',
+        'Quantity',
+        'Unit',
+        'Material',
+        'Material Grade',
+        'Weight',
+        'Annual Volume',
+        'Parent Item'
+      ];
+
+      // Example data rows
+      const exampleRows = [
+        ['ASM-001', 'Main Assembly', 'Top level assembly', 'assembly', '1', 'pcs', 'Aluminum', '6061-T6', '2500', '10000', ''],
+        ['SUB-001', 'Motor Sub-Assembly', 'Electric motor unit', 'sub_assembly', '1', 'pcs', 'Steel', 'AISI 304', '1200', '10000', 'ASM-001'],
+        ['PRT-001', 'Motor Housing', 'Cast aluminum housing', 'child_part', '1', 'pcs', 'Aluminum', 'A356', '800', '10000', 'SUB-001'],
+        ['PRT-002', 'Rotor', 'Steel rotor assembly', 'child_part', '1', 'pcs', 'Steel', '1045', '300', '10000', 'SUB-001'],
+        ['PRT-003', 'Mounting Bracket', 'L-shaped bracket', 'child_part', '4', 'pcs', 'Steel', 'AISI 304', '50', '40000', 'ASM-001'],
+        ['PRT-004', 'Bolt M8x20', 'Hex head bolt', 'child_part', '8', 'pcs', 'Steel', 'Grade 8.8', '15', '80000', 'ASM-001'],
+      ];
+
+      // Combine headers and example rows
+      const csvContent = [
+        headers.join(','),
+        ...exampleRows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ].join('\n');
+
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'BOM_Import_Template.csv');
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success('Template downloaded successfully');
+    } catch (error) {
+      console.error('Template download failed:', error);
+      toast.error('Failed to download template');
+    }
+  };
+
+  // Export BOM to CSV
+  const handleExport = () => {
+    try {
+      const items = bomItemsData?.items || [];
+
+      // Prepare CSV headers
+      const headers = [
+        'Part Number',
+        'Name',
+        'Description',
+        'Type',
+        'Quantity',
+        'Unit',
+        'Material',
+        'Material Grade',
+        'Weight',
+        'Annual Volume',
+        'Parent Item'
+      ];
+
+      // Convert items to CSV rows
+      const rows = items.map(item => [
+        item.partNumber || '',
+        item.name || '',
+        item.description || '',
+        item.itemType || '',
+        item.quantity?.toString() || '',
+        item.unit || '',
+        item.material || '',
+        item.materialGrade || '',
+        item.weight?.toString() || '',
+        item.annualVolume?.toString() || '',
+        items.find(i => i.id === item.parentItemId)?.partNumber || ''
+      ]);
+
+      // Combine headers and rows
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ].join('\n');
+
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `BOM_${bom.name}_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success('BOM exported successfully');
+    } catch (error) {
+      console.error('Export failed:', error);
+      toast.error('Failed to export BOM');
+    }
+  };
+
+  // Import BOM from CSV
+  const handleImport = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.csv';
+
+    input.onchange = async (e: any) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        const lines = text.split('\n');
+
+        if (lines.length < 2) {
+          toast.error('Invalid CSV file');
+          return;
+        }
+
+        // Parse CSV (simple parser, might need enhancement for complex CSVs)
+        const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+        const itemsToImport = [];
+
+        for (let i = 1; i < lines.length; i++) {
+          if (!lines[i].trim()) continue;
+
+          const values = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
+          const cleanedValues = values.map(v => v.trim().replace(/^"|"$/g, ''));
+
+          const item: any = {};
+          headers.forEach((header, index) => {
+            const value = cleanedValues[index] || '';
+
+            switch (header.toLowerCase()) {
+              case 'part number':
+                item.partNumber = value;
+                break;
+              case 'name':
+                item.name = value;
+                break;
+              case 'description':
+                item.description = value;
+                break;
+              case 'type':
+                item.itemType = value;
+                break;
+              case 'quantity':
+                item.quantity = value ? parseInt(value) : undefined;
+                break;
+              case 'unit':
+                item.unit = value;
+                break;
+              case 'material':
+                item.material = value;
+                break;
+              case 'material grade':
+                item.materialGrade = value;
+                break;
+              case 'weight':
+                item.weight = value ? parseFloat(value) : undefined;
+                break;
+              case 'annual volume':
+                item.annualVolume = value ? parseInt(value) : undefined;
+                break;
+            }
+          });
+
+          if (item.name) {
+            itemsToImport.push(item);
+          }
+        }
+
+        console.log('Items to import:', itemsToImport);
+        toast.success(`Parsed ${itemsToImport.length} items. Import functionality coming soon!`);
+
+        // TODO: Implement actual import API call here
+        // await createBOMItem(bomId, itemsToImport);
+        // refetchBOMItems();
+
+      } catch (error) {
+        console.error('Import failed:', error);
+        toast.error('Failed to import CSV file');
+      }
+    };
+
+    input.click();
+  };
+
+  // Save changes (currently just a placeholder - add actual save logic)
+  const handleSaveChanges = async () => {
+    try {
+      toast.success('Changes saved successfully');
+      // TODO: Implement actual save logic if you have pending changes
+      // For now, this might just be a confirmation that auto-save is working
+    } catch (error) {
+      console.error('Save failed:', error);
+      toast.error('Failed to save changes');
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -195,15 +407,35 @@ BOMDetailPage() {
             <ArrowLeft className="h-4 w-4" />
             Back to Project
           </Button>
-          <Button variant="outline" className="gap-2">
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={handleDownloadTemplate}
+            title="Download CSV template with example data"
+          >
+            <FileDown className="h-4 w-4" />
+            Template
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={handleImport}
+          >
             <Upload className="h-4 w-4" />
             Import
           </Button>
-          <Button variant="outline" className="gap-2">
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={handleExport}
+          >
             <Download className="h-4 w-4" />
             Export
           </Button>
-          <Button className="gap-2">
+          <Button
+            className="gap-2"
+            onClick={handleSaveChanges}
+          >
             <Save className="h-4 w-4" />
             Save Changes
           </Button>

@@ -23,6 +23,28 @@ import {
   type TableRow as ProcessTableRow,
 } from '@/lib/api/hooks/useProcesses';
 
+// Helper function to convert snake_case to camelCase
+const snakeToCamel = (str: string): string => {
+  return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+};
+
+// Helper function to get value from row data with fallback for both naming conventions
+const getRowValue = (row: any, columnName: string): any => {
+  // Try exact match first
+  if (row[columnName] !== undefined) {
+    return row[columnName];
+  }
+
+  // Try camelCase version
+  const camelCaseName = snakeToCamel(columnName);
+  if (row[camelCaseName] !== undefined) {
+    return row[camelCaseName];
+  }
+
+  // Return undefined if neither exists
+  return undefined;
+};
+
 export default function ProcessPage() {
   const [selectedProcessId, setSelectedProcessId] = useState<string | null>(null);
   const [editingTableId, setEditingTableId] = useState<string | null>(null);
@@ -50,11 +72,31 @@ export default function ProcessPage() {
     if (table?.rows) {
       setEditedTableData({
         ...editedTableData,
-        [tableId]: table.rows.map(row => ({
-          ...((row as any).row_data || row.rowData),
-          _id: row.id,
-          _order: (row as any).row_order || row.rowOrder
-        }))
+        [tableId]: table.rows.map(row => {
+          const rowData = (row as any).row_data || row.rowData || {};
+
+          // Normalize data to have both snake_case and camelCase keys
+          const normalizedData: any = { ...rowData };
+
+          // For each column definition, ensure both naming conventions exist
+          table.columnDefinitions.forEach(col => {
+            const snakeCase = col.name;
+            const camelCase = snakeToCamel(col.name);
+
+            // If we have the value in either format, copy to both
+            if (rowData[snakeCase] !== undefined) {
+              normalizedData[camelCase] = rowData[snakeCase];
+            } else if (rowData[camelCase] !== undefined) {
+              normalizedData[snakeCase] = rowData[camelCase];
+            }
+          });
+
+          return {
+            ...normalizedData,
+            _id: row.id,
+            _order: (row as any).row_order || row.rowOrder
+          };
+        })
       });
     }
   };
@@ -90,10 +132,12 @@ export default function ProcessPage() {
     const table = referenceTables?.find(t => t.id === tableId);
     if (!table) return;
 
-    // Create empty row based on column definitions
+    // Create empty row based on column definitions with both naming conventions
     const newRow: Record<string, any> = {};
     table.columnDefinitions.forEach(col => {
-      newRow[col.name] = col.type === 'number' ? 0 : '';
+      const defaultValue = col.type === 'number' ? 0 : '';
+      newRow[col.name] = defaultValue;  // snake_case
+      newRow[snakeToCamel(col.name)] = defaultValue;  // camelCase
     });
 
     const currentData = editedTableData[tableId] || [];
@@ -114,10 +158,17 @@ export default function ProcessPage() {
   const handleUpdateRow = (tableId: string, index: number, field: string, value: any, fieldType?: string) => {
     const currentData = editedTableData[tableId] || [];
     const updated = [...currentData];
+
+    // Store in both snake_case and camelCase for compatibility
+    const camelCaseField = snakeToCamel(field);
+    const processedValue = fieldType === 'number' ? Number(value) : value;
+
     updated[index] = {
       ...updated[index],
-      [field]: fieldType === 'number' ? Number(value) : value
+      [field]: processedValue,  // snake_case (for backend)
+      [camelCaseField]: processedValue  // camelCase (for display)
     };
+
     setEditedTableData({
       ...editedTableData,
       [tableId]: updated
@@ -126,9 +177,23 @@ export default function ProcessPage() {
 
   const renderEditableTable = (table: ReferenceTable) => {
     const isEditing = editingTableId === table.id;
+
+    // Enhanced data mapping - handle both snake_case and camelCase
+    const mapRowData = (row: any) => {
+      // Try row_data (snake_case from DB) first, then rowData (camelCase)
+      const rowData = row.row_data || row.rowData || row;
+
+      // Debug log for problematic tables
+      if (!rowData || Object.keys(rowData).length === 0) {
+        console.warn('Empty row data detected:', row);
+      }
+
+      return rowData;
+    };
+
     const displayData = isEditing
-      ? (editedTableData[table.id] || table.rows?.map(r => (r as any).row_data || r.rowData) || [])
-      : (table.rows?.map(r => (r as any).row_data || r.rowData) || []);
+      ? (editedTableData[table.id] || table.rows?.map(mapRowData) || [])
+      : (table.rows?.map(mapRowData) || []);
 
     return (
       <Card key={table.id}>
@@ -202,22 +267,25 @@ export default function ProcessPage() {
                 ) : (
                   displayData.map((row, idx) => (
                     <TableRow key={idx}>
-                      {table.columnDefinitions.map((col, colIdx) => (
-                        <TableCell key={col.name} className={colIdx !== 0 ? 'text-right' : ''}>
-                          {isEditing ? (
-                            <Input
-                              type={col.type === 'number' ? 'number' : 'text'}
-                              value={row[col.name] ?? ''}
-                              onChange={(e) => handleUpdateRow(table.id, idx, col.name, e.target.value, col.type)}
-                              className="h-8"
-                            />
-                          ) : (
-                            <span className={colIdx === 0 ? 'font-medium' : ''}>
-                              {row[col.name]}
-                            </span>
-                          )}
-                        </TableCell>
-                      ))}
+                      {table.columnDefinitions.map((col, colIdx) => {
+                        const cellValue = getRowValue(row, col.name);
+                        return (
+                          <TableCell key={col.name} className={colIdx !== 0 ? 'text-right' : ''}>
+                            {isEditing ? (
+                              <Input
+                                type={col.type === 'number' ? 'number' : 'text'}
+                                value={cellValue ?? ''}
+                                onChange={(e) => handleUpdateRow(table.id, idx, col.name, e.target.value, col.type)}
+                                className="h-8"
+                              />
+                            ) : (
+                              <span className={colIdx === 0 ? 'font-medium' : ''}>
+                                {cellValue}
+                              </span>
+                            )}
+                          </TableCell>
+                        );
+                      })}
                       {isEditing && (
                         <TableCell className="text-right">
                           <Button

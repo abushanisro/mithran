@@ -530,7 +530,7 @@ release/version          // Release preparation
 
 ---
 
-## 🚀 **Deployment & Operations**
+## **Deployment & Operations**
 
 ### **Production Deployment**
 ```bash

@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -11,7 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Info, Database } from 'lucide-react';
+import { Info } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import type { DataSource } from '@/lib/api/calculators';
 
 type DatabaseFieldExtractorProps = {
@@ -19,6 +19,7 @@ type DatabaseFieldExtractorProps = {
   recordId?: string;
   selectedField?: string;
   onFieldSelect: (field: string) => void;
+  disabled?: boolean;
 };
 
 // Define available fields for each data source
@@ -63,6 +64,7 @@ export function DatabaseFieldExtractor({
   recordId,
   selectedField,
   onFieldSelect,
+  disabled = false,
 }: DatabaseFieldExtractorProps) {
   const [availableFields, setAvailableFields] = useState<Array<{ field: string; label: string; description: string }>>([]);
 
@@ -81,13 +83,12 @@ export function DatabaseFieldExtractor({
   return (
     <div className="space-y-3 pt-3 border-t border-primary/10">
       <div className="flex items-center gap-2">
-        <Database className="h-3 w-3 text-primary" />
         <Label className="text-xs font-semibold">Extract Specific Field</Label>
       </div>
 
       <div className="space-y-2">
-        <Select value={selectedField || ''} onValueChange={onFieldSelect}>
-          <SelectTrigger className="h-9">
+        <Select value={selectedField || ''} onValueChange={onFieldSelect} disabled={disabled}>
+          <SelectTrigger className={cn("h-9", disabled ? "bg-secondary/20" : "bg-primary/5 border-primary/10")}>
             <SelectValue placeholder="Select field to extract (optional)" />
           </SelectTrigger>
           <SelectContent>
@@ -124,12 +125,15 @@ export function DatabaseFieldExtractor({
       </div>
 
       {/* Preview */}
-      {selectedField && recordId && (
+      {selectedField && (
         <div className="bg-primary/5 border border-primary/10 rounded-md p-2">
           <div className="text-xs font-mono">
             <span className="text-muted-foreground">Formula:</span>{' '}
             <span className="text-primary">
-              LOOKUP("{dataSource}", "{recordId}", "{selectedField}")
+              {recordId
+                ? `LOOKUP("${dataSource}", "${recordId}", "${selectedField}")`
+                : `LOOKUP("${dataSource}", "<record_id>", "${selectedField}")`
+              }
             </span>
           </div>
         </div>

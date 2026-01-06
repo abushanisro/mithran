@@ -106,8 +106,8 @@ async function bootstrap() {
   const port = configService.get('PORT', 4000);
   await app.listen(port);
 
-  logger.log(`🚀 API Gateway running on: http://localhost:${port}`, 'Bootstrap');
-  logger.log(`📚 API Documentation: http://localhost:${port}/api/docs`, 'Bootstrap');
+  logger.log(`API Gateway running on: http://localhost:${port}`, 'Bootstrap');
+  logger.log(`API Documentation: http://localhost:${port}/api/docs`, 'Bootstrap');
 }
 
 bootstrap();

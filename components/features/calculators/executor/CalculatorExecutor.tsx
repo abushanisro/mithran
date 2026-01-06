@@ -157,6 +157,7 @@ export function CalculatorExecutor({ calculatorId }: CalculatorExecutorProps) {
                   }))
                 }
                 placeholder={field.displayLabel}
+                className="bg-primary/5 border-primary/10"
               />
               {field.unit && (
                 <p className="text-xs text-muted-foreground">Unit: {field.unit}</p>
