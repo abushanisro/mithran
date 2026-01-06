@@ -106,12 +106,14 @@ export type CreateCalculatorData = {
   isPublic?: boolean;
   templateCategory?: string;
   displayConfig?: Record<string, any>;
+  fields?: CreateFieldData[];
+  formulas?: CreateFormulaData[];
 };
 
 export type UpdateCalculatorData = Partial<CreateCalculatorData>;
 
 export type CreateFieldData = {
-  calculatorId: string;
+  calculatorId?: string;
   fieldName: string;
   displayLabel: string;
   fieldType: FieldType;
@@ -133,7 +135,7 @@ export type CreateFieldData = {
 export type UpdateFieldData = Partial<CreateFieldData>;
 
 export type CreateFormulaData = {
-  calculatorId: string;
+  calculatorId?: string;
   formulaName: string;
   displayLabel: string;
   description?: string;

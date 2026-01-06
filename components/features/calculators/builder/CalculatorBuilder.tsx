@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useCalculator, useUpdateCalculator } from '@/lib/api/hooks';
-import type { Calculator, CalculatorField, CalculatorFormula, FieldType, DataSource } from '@/lib/api/calculators';
+import type { Calculator, CalculatorField, FieldType, DataSource } from '@/lib/api/calculators';
 import { FormulaEditor } from './FormulaEditor';
 import { DatabaseFieldExtractor } from './DatabaseFieldExtractor';
 import { cn } from '@/lib/utils';
@@ -114,16 +114,18 @@ export function CalculatorBuilder({ calculatorId }: CalculatorBuilderProps) {
   };
 
   const handleUpdateField = (index: number, updates: Partial<CalculatorField>) => {
-    if (!currentData || !currentData.fields) return;
+    const fields = currentData?.fields;
+    const field = fields?.[index];
+    if (!field || !fields) return;
 
     // Use the exact display label as field name
     if (updates.displayLabel !== undefined) {
       updates.fieldName = updates.displayLabel;
     }
 
-    const updatedFields = [...currentData.fields];
-    const fieldId = updatedFields[index].id;
-    updatedFields[index] = { ...updatedFields[index], ...updates };
+    const updatedFields = [...fields];
+    const fieldId = field.id;
+    updatedFields[index] = { ...field, ...updates } as CalculatorField;
 
     setDraftCalculator({
       ...currentData,
@@ -142,13 +144,15 @@ export function CalculatorBuilder({ calculatorId }: CalculatorBuilderProps) {
   };
 
   const handleDeleteField = (index: number) => {
-    if (!currentData || !currentData.fields) return;
+    const fields = currentData?.fields;
+    const field = fields?.[index];
+    if (!field || !fields) return;
 
-    const fieldId = currentData.fields[index].id;
+    const fieldId = field.id;
 
     setDraftCalculator({
       ...currentData,
-      fields: currentData.fields.filter((_, i) => i !== index),
+      fields: fields.filter((_, i) => i !== index),
     });
 
     // Clean up tracking sets
@@ -164,53 +168,8 @@ export function CalculatorBuilder({ calculatorId }: CalculatorBuilderProps) {
     });
   };
 
-  const handleAddFormula = () => {
-    if (!currentData) return;
-
-    const newFormula: Partial<CalculatorFormula> = {
-      id: `temp-${Date.now()}`,
-      formulaName: '', // Will be generated from displayLabel
-      displayLabel: '',
-      formulaExpression: '',
-      executionOrder: currentData.formulas?.length || 0,
-      displayInResults: true,
-      isPrimaryResult: false,
-      decimalPlaces: 2,
-      displayFormat: 'number',
-    };
-
-    setDraftCalculator({
-      ...currentData,
-      formulas: [...(currentData.formulas || []), newFormula as CalculatorFormula],
-    });
-  };
-
-  const handleUpdateFormula = (index: number, updates: Partial<CalculatorFormula>) => {
-    if (!currentData || !currentData.formulas) return;
-
-    const updatedFormulas = [...currentData.formulas];
-
-    // Use the exact display label as formula name
-    if (updates.displayLabel !== undefined) {
-      updates.formulaName = updates.displayLabel;
-    }
-
-    updatedFormulas[index] = { ...updatedFormulas[index], ...updates };
-
-    setDraftCalculator({
-      ...currentData,
-      formulas: updatedFormulas,
-    });
-  };
-
-  const handleDeleteFormula = (index: number) => {
-    if (!currentData || !currentData.formulas) return;
-
-    setDraftCalculator({
-      ...currentData,
-      formulas: currentData.formulas.filter((_, i) => i !== index),
-    });
-  };
+  // Formula management removed as it's now integrated into fields
+  // handleAddFormula, handleUpdateFormula, handleDeleteFormula were unused
 
   /**
    * SAVE INDIVIDUAL FIELD
@@ -517,10 +476,7 @@ export function CalculatorBuilder({ calculatorId }: CalculatorBuilderProps) {
                     )}
                   >
                     {/* Status Badge */}
-                    <div className="flex items-center justify-between mb-2">
-                      <Badge variant={isFieldSaved ? "default" : "secondary"} className="text-xs">
-                        {isFieldSaved ? "✓ Saved" : "✎ Editing"}
-                      </Badge>
+                    <div className="flex items-center justify-end mb-2 h-6">
                       {field.fieldName && (
                         <span className="text-xs text-muted-foreground font-mono">
                           {field.fieldName}
@@ -712,11 +668,6 @@ export function CalculatorBuilder({ calculatorId }: CalculatorBuilderProps) {
                                 type: f.fieldType,
                                 label: f.displayLabel || f.fieldName || '',
                               })) || []
-                          }
-                          availableFormulas={
-                            currentData.formulas?.map((f) => ({
-                              name: f.formulaName || f.displayLabel || '',
-                            })) || []
                           }
                           disabled={isFieldSaved}
                         />

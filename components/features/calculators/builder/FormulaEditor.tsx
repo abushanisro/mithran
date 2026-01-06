@@ -19,14 +19,13 @@ import {
 } from '@/components/ui/popover';
 import { AlertCircle, CheckCircle2, Info } from 'lucide-react';
 import { validateFormula, getAutocompleteSuggestions } from '@/lib/formula/validator';
-import { FORMULA_FUNCTIONS, type FormulaFunction } from '@/lib/formula/functions';
+import { FORMULA_FUNCTIONS } from '@/lib/formula/functions';
 import { cn } from '@/lib/utils';
 
 type FormulaEditorProps = {
   value: string;
   onChange: (value: string) => void;
   availableFields: Array<{ id?: string; name: string; type: string; label?: string }>;
-  availableFormulas?: Array<{ name: string }>;
   placeholder?: string;
   showHelp?: boolean;
   disabled?: boolean;
@@ -36,7 +35,6 @@ export function FormulaEditor({
   value,
   onChange,
   availableFields,
-  availableFormulas = [],
   placeholder = 'e.g., {volume} * {density} + 100',
   showHelp = true,
   disabled = false,
