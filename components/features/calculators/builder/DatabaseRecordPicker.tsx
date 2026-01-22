@@ -50,7 +50,6 @@ export function DatabaseRecordPicker({
 
   // Handle popover close
   const handleClose = () => {
-    console.log('[DatabaseRecordPicker] Closing popover');
     setOpen(false);
     setSearch(''); // Clear search when closing
   };
@@ -157,7 +156,6 @@ export function DatabaseRecordPicker({
           setError(`No ${dataSource.replace('_', ' ')} records found in database`);
           setRecords([]);
         } else {
-          console.log(`[DatabaseRecordPicker] Found ${data.length} ${dataSource} records`);
           const mappedRecords = data.map(mapFunction);
           setRecords(mappedRecords);
           setError(null);
@@ -189,14 +187,8 @@ export function DatabaseRecordPicker({
   useEffect(() => {
     if (value && records.length > 0) {
       const found = records.find(r => r.id === value);
-      console.log('[DatabaseRecordPicker] Updating selected record:', {
-        value,
-        found: found ? found.displayLabel : null,
-        totalRecords: records.length,
-      });
       setSelectedRecord(found || null);
     } else {
-      console.log('[DatabaseRecordPicker] Clearing selected record (value:', value, ')');
       setSelectedRecord(null);
     }
   }, [value, records]);
@@ -207,7 +199,6 @@ export function DatabaseRecordPicker({
 
   return (
     <Popover open={open} onOpenChange={(newOpen) => {
-      console.log('[DatabaseRecordPicker] Popover state change:', { from: open, to: newOpen });
       setOpen(newOpen);
       if (!newOpen) {
         setSearch(''); // Clear search when closing
@@ -221,11 +212,6 @@ export function DatabaseRecordPicker({
           disabled={disabled}
           className="w-full justify-between"
           onClick={() => {
-            console.log('[DatabaseRecordPicker] Button clicked, current state:', {
-              open,
-              selectedRecord: selectedRecord?.displayLabel,
-              value,
-            });
           }}
         >
           {selectedRecord ? selectedRecord.displayLabel : placeholder}
@@ -329,26 +315,14 @@ export function DatabaseRecordPicker({
                       key={record.id}
                       value={record.displayLabel.toLowerCase()}
                       onSelect={() => {
-                        console.log('[DatabaseRecordPicker] Item clicked:', {
-                          recordId: record.id,
-                          displayLabel: record.displayLabel,
-                          currentValue: value,
-                          isCurrentlySelected: value === record.id,
-                          willToggle: value === record.id,
-                        });
 
                         // Toggle selection: if already selected, deselect
                         const isSelected = value === record.id;
 
                         try {
                           if (isSelected) {
-                            console.log('[DatabaseRecordPicker] Deselecting');
                             onSelect(null);
                           } else {
-                            console.log('[DatabaseRecordPicker] Selecting record:', {
-                              id: record.id,
-                              label: record.displayLabel,
-                            });
                             onSelect(record);
                           }
                         } catch (err) {

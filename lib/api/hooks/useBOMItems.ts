@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../client';
+import { useAuthReady } from '@/lib/providers/auth';
 
 export interface BOMItem {
   id: string;
@@ -10,7 +11,7 @@ export interface BOMItem {
   itemType: 'assembly' | 'sub_assembly' | 'child_part';
   quantity: number;
   annualVolume: number;
-  unit: string;
+  unit?: string;
   material?: string;
   materialGrade?: string;
   materialId?: string;
@@ -74,15 +75,18 @@ const bomItemKeys = {
  * Hook to fetch BOM items for a specific BOM
  */
 export function useBOMItems(bomId?: string) {
+  const authReady = useAuthReady();
+
   return useQuery({
     queryKey: bomItemKeys.list(bomId),
     queryFn: async () => {
       if (!bomId) return { items: [] };
       return apiClient.get<{ items: BOMItem[] }>(`/bom-items?bomId=${bomId}`);
     },
-    enabled: !!bomId,
-    staleTime: 0, // Always fetch fresh data for real-time updates
-    refetchOnWindowFocus: true,
+    enabled: authReady && !!bomId,
+    staleTime: 2 * 60 * 1000, // Fresh for 2 minutes - medium-changing data
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 }
 
@@ -90,12 +94,14 @@ export function useBOMItems(bomId?: string) {
  * Hook to fetch a single BOM item
  */
 export function useBOMItem(itemId?: string) {
+  const authReady = useAuthReady();
+
   return useQuery({
     queryKey: bomItemKeys.detail(itemId!),
     queryFn: async () => {
       return apiClient.get<BOMItem>(`/bom-items/${itemId}`);
     },
-    enabled: !!itemId,
+    enabled: authReady && !!itemId,
     staleTime: 1000 * 60 * 2,
   });
 }
@@ -127,8 +133,10 @@ export function useUpdateBOMItem() {
       return apiClient.put<BOMItem>(`/bom-items/${id}`, data);
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: bomItemKeys.list(data.bomId) });
-      queryClient.invalidateQueries({ queryKey: bomItemKeys.detail(data.id) });
+      if (data) {
+        queryClient.invalidateQueries({ queryKey: bomItemKeys.list(data.bomId) });
+        queryClient.invalidateQueries({ queryKey: bomItemKeys.detail(data.id) });
+      }
     },
   });
 }
@@ -150,18 +158,22 @@ export function useDeleteBOMItem() {
 }
 
 // Standalone functions for non-hook usage
-export function createBOMItem(dto: CreateBOMItemDto): Promise<BOMItem> {
-  return apiClient.post<BOMItem>('/bom-items', dto);
+export async function createBOMItem(dto: CreateBOMItemDto): Promise<BOMItem> {
+  const data = await apiClient.post<BOMItem>('/bom-items', dto);
+  if (!data) throw new Error('Failed to create BOM item');
+  return data;
 }
 
-export function updateBOMItem(id: string, dto: UpdateBOMItemDto): Promise<BOMItem> {
-  return apiClient.put<BOMItem>(`/bom-items/${id}`, dto);
+export async function updateBOMItem(id: string, dto: UpdateBOMItemDto): Promise<BOMItem> {
+  const data = await apiClient.put<BOMItem>(`/bom-items/${id}`, dto);
+  if (!data) throw new Error('Failed to update BOM item');
+  return data;
 }
 
-export function deleteBOMItem(id: string): Promise<void> {
-  return apiClient.delete(`/bom-items/${id}`);
+export async function deleteBOMItem(id: string): Promise<void> {
+  await apiClient.delete(`/bom-items/${id}`);
 }
 
-export function updateBOMItemsSortOrder(items: Array<{ id: string; sortOrder: number }>): Promise<void> {
-  return apiClient.patch('/bom-items/reorder', { items });
+export async function updateBOMItemsSortOrder(items: Array<{ id: string; sortOrder: number }>): Promise<void> {
+  await apiClient.patch('/bom-items/reorder', { items });
 }

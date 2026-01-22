@@ -1,21 +1,47 @@
 'use client'
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from '@tanstack/react-query'
 import { useState, type ReactNode } from 'react'
+import { ApiError } from '@/lib/api/client'
+import { supabase } from '@/lib/supabase/client'
+import { toast } from 'sonner'
+
+let hasShownAuthError = false;
 
 export function QueryProvider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
+        queryCache: new QueryCache({
+          onError: (error) => {
+            // Global error handler for queries
+            handleQueryError(error);
+          },
+        }),
+        mutationCache: new MutationCache({
+          onError: (error) => {
+            // Global error handler for mutations
+            handleQueryError(error);
+          },
+        }),
         defaultOptions: {
           queries: {
-            // With SSR, we usually want to set some default staleTime
-            // above 0 to avoid refetching immediately on the client
-            staleTime: 60 * 1000,
+            // Data stays fresh for 5 minutes - prevents duplicate calls
+            staleTime: 60 * 1000 * 5, // 5 minutes
+            gcTime: 60 * 1000 * 10, // 10 minutes (was cacheTime)
             refetchOnWindowFocus: false,
-            // Disable retries temporarily for debugging
-            retry: 0,
-            retryDelay: 0,
+            refetchOnMount: false, // Don't refetch if data is fresh
+            refetchOnReconnect: 'always',
+            structuralSharing: true, // Deduplicate requests
+            retry: (failureCount, error) => {
+              // Don't retry on auth errors
+              if (error instanceof ApiError && error.isUnauthorized()) {
+                return false;
+              }
+              // Retry up to 1 time for faster error feedback
+              return failureCount < 1;
+            },
+            retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
           },
         },
       })
@@ -26,4 +52,43 @@ export function QueryProvider({ children }: { children: ReactNode }) {
       {children}
     </QueryClientProvider>
   )
+}
+
+/**
+ * Handle errors from React Query
+ */
+function handleQueryError(error: unknown): void {
+  // Check if it's an authentication error
+  if (error instanceof ApiError && error.isUnauthorized()) {
+    // Prevent duplicate notifications
+    if (hasShownAuthError) {
+      return;
+    }
+
+    hasShownAuthError = true;
+
+    // Show user-friendly message
+    toast.error('Your session has expired. Please log in again.', {
+      duration: 5000,
+      id: 'auth-error',
+    });
+
+    // Sign out (fire and forget)
+    if (supabase) {
+      supabase.auth.signOut().catch(() => {
+        // Ignore errors
+      });
+    }
+
+    // Hard redirect to login (prevents back button to authenticated pages)
+    if (typeof window !== 'undefined') {
+      // Save current path for redirect after login
+      const currentPath = window.location.pathname + window.location.search;
+      if (currentPath !== '/auth' && currentPath !== '/') {
+        sessionStorage.setItem('redirectAfterLogin', currentPath);
+      }
+
+      window.location.replace('/auth');
+    }
+  }
 }

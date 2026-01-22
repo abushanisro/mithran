@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/providers/auth';
 import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
@@ -16,14 +16,25 @@ interface AppLayoutProps {
 export function AppLayout({ children }: AppLayoutProps) {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const [shouldRedirect, setShouldRedirect] = useState(false);
 
   useEffect(() => {
+    // Only redirect after auth has fully loaded and there's definitively no user
     if (!loading && !user) {
-      router.push('/auth');
+      // Add a small delay to prevent flashing during normal auth resolution
+      const timer = setTimeout(() => {
+        setShouldRedirect(true);
+        router.replace('/auth');
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    } else if (user) {
+      setShouldRedirect(false);
     }
   }, [user, loading, router]);
 
-  if (loading) {
+  // Show loading during auth resolution or when about to redirect
+  if (loading || (!user && !shouldRedirect)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
@@ -38,8 +49,20 @@ export function AppLayout({ children }: AppLayoutProps) {
     );
   }
 
-  if (!user) {
-    return null;
+  // If we're redirecting, show loading state
+  if (shouldRedirect || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center animate-pulse">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground">Redirecting...</p>
+        </div>
+      </div>
+    );
   }
 
   return (

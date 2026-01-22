@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../client';
+import { useAuth } from '@/lib/providers/auth';
 import { toast } from 'sonner';
 
 // ============================================================================
@@ -117,17 +118,22 @@ export interface BulkUpdateTableRowsData {
 // ============================================================================
 
 export function useProcesses(params?: QueryProcessesParams) {
+  const { user, loading: authLoading } = useAuth();
+
   return useQuery({
     queryKey: ['processes', 'list', params],
     queryFn: async () => {
       const response = await apiClient.get<ProcessListResponse>('/processes', { params });
       return response;
     },
+    enabled: !authLoading && !!user,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }
 
 export function useProcess(id: string | undefined) {
+  const { user, loading: authLoading } = useAuth();
+
   return useQuery({
     queryKey: ['processes', 'detail', id],
     queryFn: async () => {
@@ -135,7 +141,7 @@ export function useProcess(id: string | undefined) {
       const response = await apiClient.get<Process>(`/processes/${id}`);
       return response;
     },
-    enabled: !!id,
+    enabled: !authLoading && !!user && !!id,
   });
 }
 
@@ -202,6 +208,8 @@ export function useDeleteProcess() {
 // ============================================================================
 
 export function useReferenceTables(processId: string | undefined) {
+  const { user, loading: authLoading } = useAuth();
+
   return useQuery({
     queryKey: ['processes', processId, 'reference-tables'],
     queryFn: async () => {
@@ -209,12 +217,14 @@ export function useReferenceTables(processId: string | undefined) {
       const response = await apiClient.get<ReferenceTable[]>(`/processes/${processId}/reference-tables`);
       return response;
     },
-    enabled: !!processId,
+    enabled: !authLoading && !!user && !!processId,
     staleTime: 1000 * 60 * 2, // 2 minutes
   });
 }
 
 export function useReferenceTable(tableId: string | undefined) {
+  const { user, loading: authLoading } = useAuth();
+
   return useQuery({
     queryKey: ['reference-tables', tableId],
     queryFn: async () => {
@@ -222,7 +232,7 @@ export function useReferenceTable(tableId: string | undefined) {
       const response = await apiClient.get<ReferenceTable>(`/processes/reference-tables/${tableId}`);
       return response;
     },
-    enabled: !!tableId,
+    enabled: !authLoading && !!user && !!tableId,
     staleTime: 1000 * 60 * 2,
   });
 }
@@ -374,5 +384,48 @@ export function useBulkUpdateTableRows() {
     onError: (error: any) => {
       toast.error(error?.message || 'Failed to update table rows');
     },
+  });
+}
+
+// ============================================================================
+// VENDOR PROCESS CAPABILITIES (OEM-Standard Sourcing)
+// ============================================================================
+
+export interface VendorProcessCapability {
+  vendorId: string;
+  vendorName: string;
+  vendorCode: string;
+  equipmentAvailable: string[];
+  capacityPerMonth: number;
+  leadTimeDays: number;
+  certifications: string[];
+}
+
+/**
+ * Get vendors capable of performing a specific manufacturing process
+ * OEM-Standard: Filters vendors by process capability for supplier evaluation
+ *
+ * Behavior:
+ * - Returns empty array if processId is undefined
+ * - Disabled until processId is provided
+ * - Auto-refetches when processId changes
+ *
+ * Usage:
+ * const { data: vendors } = useVendorsByProcess(selectedProcessId);
+ */
+export function useVendorsByProcess(processId: string | undefined) {
+  const { user, loading: authLoading } = useAuth();
+
+  return useQuery({
+    queryKey: ['processes', 'vendors-by-process', processId],
+    queryFn: async () => {
+      if (!processId) return [];
+      const response = await apiClient.get<VendorProcessCapability[]>(
+        `/processes/vendors-by-process/${processId}`
+      );
+      return response;
+    },
+    enabled: !authLoading && !!user && !!processId,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }

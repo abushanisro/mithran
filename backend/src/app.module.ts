@@ -12,10 +12,16 @@ import { BOMItemsModule } from './modules/bom-items/bom-items.module';
 import { ProcessesModule } from './modules/processes/processes.module';
 import { ProcessRoutesModule } from './modules/process-routes/process-routes.module';
 import { RawMaterialsModule } from './modules/raw-materials/raw-materials.module';
+import { ChildPartsModule } from './modules/child-parts/child-parts.module';
+import { PackagingLogisticsModule } from './modules/packaging-logistics/packaging-logistics.module';
+import { ProcuredPartsModule } from './modules/procured-parts/procured-parts.module';
 import { MHRModule } from './modules/mhr/mhr.module';
 import { LSRModule } from './modules/lsr/lsr.module';
 import { CalculatorsModule } from './modules/calculators/calculators.module';
 import { HealthModule } from './modules/health/health.module';
+import { SupplierEvaluationModule } from './modules/supplier-evaluation/supplier-evaluation.module';
+import { SupplierEvaluationGroupsModule } from './modules/supplier-evaluation-groups/supplier-evaluation-groups.module';
+import { RfqModule } from './modules/rfq/rfq.module';
 import { LoggerModule } from './common/logger/logger.module';
 import { SupabaseService } from './common/supabase/supabase.service';
 import { SupabaseAuthGuard } from './common/guards/supabase-auth.guard';
@@ -56,10 +62,16 @@ import { validate } from './config/env.validation';
     ProcessesModule,
     ProcessRoutesModule,
     RawMaterialsModule,
+    ChildPartsModule,
+    PackagingLogisticsModule,
+    ProcuredPartsModule,
     MHRModule,
     LSRModule,
     CalculatorsModule,
     HealthModule,
+    SupplierEvaluationModule,
+    SupplierEvaluationGroupsModule,
+    RfqModule,
   ],
   controllers: [],
   providers: [

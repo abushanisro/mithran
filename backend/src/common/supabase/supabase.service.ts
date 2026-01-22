@@ -68,4 +68,8 @@ export class SupabaseService {
   getAdminClient(): SupabaseClient {
     return this.adminClient;
   }
+
+  get client(): SupabaseClient {
+    return this.adminClient;
+  }
 }

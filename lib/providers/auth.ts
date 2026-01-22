@@ -1,7 +1,7 @@
 /**
  * Auth Module
  *
- * Re-exports the backend auth hook for convenience
+ * Re-exports the backend auth hooks for convenience
  */
 
-export { useAuth } from './backend-auth-provider';
+export { useAuth, useAuthReady } from './backend-auth-provider';

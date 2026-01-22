@@ -256,6 +256,19 @@ function STLModel({
     }
   }, [sectionPlane]);
 
+  // Cleanup geometry and materials on unmount
+  useEffect(() => {
+    return () => {
+      if (meshRef.current) {
+        const material = meshRef.current.material as THREE.Material;
+        if (material) {
+          material.dispose();
+        }
+      }
+      // Note: geometry is handled by useLoader and will be disposed automatically
+    };
+  }, []);
+
   return (
     <mesh ref={meshRef} geometry={geometry} castShadow receiveShadow>
       <meshStandardMaterial
@@ -419,6 +432,18 @@ export function EDrawingsViewer({ fileUrl, fileName, onMeasurements }: EDrawings
     y: new THREE.Vector3(),
     z: new THREE.Vector3(),
   });
+
+  // Store WebGL cleanup function
+  const webglCleanupRef = useRef<(() => void) | null>(null);
+
+  // Cleanup WebGL context on unmount
+  useEffect(() => {
+    return () => {
+      if (webglCleanupRef.current) {
+        webglCleanupRef.current();
+      }
+    };
+  }, []);
 
   const CAD_VIEWS = getCADViews(cameraDistance);
 
@@ -653,8 +678,39 @@ export function EDrawingsViewer({ fileUrl, fileName, onMeasurements }: EDrawings
               alpha: true,
               powerPreference: 'high-performance',
               localClippingEnabled: true,
+              preserveDrawingBuffer: false,
+              failIfMajorPerformanceCaveat: false,
             }}
-            onCreated={() => setLoading(false)}
+            onCreated={(state) => {
+              // Handle context loss
+              const gl = state.gl.getContext();
+              const canvas = state.gl.domElement;
+              
+              const handleContextLost = (event: Event) => {
+                console.warn('WebGL context lost, preventing default');
+                event.preventDefault();
+                setLoading(true);
+              };
+              
+              const handleContextRestored = () => {
+                console.log('WebGL context restored');
+                setLoading(false);
+              };
+              
+              canvas.addEventListener('webglcontextlost', handleContextLost);
+              canvas.addEventListener('webglcontextrestored', handleContextRestored);
+              
+              // Store cleanup function
+              const cleanup = () => {
+                canvas.removeEventListener('webglcontextlost', handleContextLost);
+                canvas.removeEventListener('webglcontextrestored', handleContextRestored);
+              };
+              
+              // Store cleanup function in ref for component unmount
+              webglCleanupRef.current = cleanup;
+              
+              setLoading(false);
+            }}
           >
             <Scene
               fileUrl={fileUrl}

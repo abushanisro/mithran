@@ -643,4 +643,52 @@ export class ProcessesService {
       operations,
     };
   }
+
+  // ============================================================================
+  // VENDOR PROCESS CAPABILITIES
+  // ============================================================================
+
+  /**
+   * Get vendors capable of performing a specific process
+   * Uses database function: get_vendors_by_process
+   */
+  async getVendorsByProcess(processId: string, userId: string, accessToken: string) {
+    this.logger.log(`Fetching vendors for process ${processId}`, 'ProcessesService');
+
+    const { data, error } = await this.supabaseService
+      .getClient(accessToken)
+      .rpc('get_vendors_by_process', {
+        p_process_id: processId,
+        p_user_id: userId,
+      });
+
+    if (error) {
+      this.logger.error(`Error fetching vendors by process: ${error.message}`, 'ProcessesService');
+      throw new InternalServerErrorException(`Failed to fetch vendors: ${error.message}`);
+    }
+
+    return data || [];
+  }
+
+  /**
+   * Get processes that a vendor can perform
+   * Uses database function: get_processes_by_vendor
+   */
+  async getProcessesByVendor(vendorId: string, userId: string, accessToken: string) {
+    this.logger.log(`Fetching processes for vendor ${vendorId}`, 'ProcessesService');
+
+    const { data, error } = await this.supabaseService
+      .getClient(accessToken)
+      .rpc('get_processes_by_vendor', {
+        p_vendor_id: vendorId,
+        p_user_id: userId,
+      });
+
+    if (error) {
+      this.logger.error(`Error fetching processes by vendor: ${error.message}`, 'ProcessesService');
+      throw new InternalServerErrorException(`Failed to fetch processes: ${error.message}`);
+    }
+
+    return data || [];
+  }
 }

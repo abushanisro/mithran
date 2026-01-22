@@ -14,9 +14,11 @@ import { ApiTags, ApiOperation, ApiResponse, ApiExcludeEndpoint } from '@nestjs/
 import { HealthCheckService, HealthCheck, HealthCheckResult } from '@nestjs/terminus';
 import { SupabaseHealthIndicator } from './indicators/supabase.health';
 import { Response } from 'express';
+import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('Health')
 @Controller('health')
+@Public() // Health checks should be publicly accessible for monitoring
 export class HealthController {
   constructor(
     private readonly health: HealthCheckService,
@@ -96,10 +98,12 @@ export class CommonRoutesController {
       documentation: '/api/docs',
       health: '/health',
       endpoints: {
-        mhr: '/api/v1/mhr',
-        lsr: '/api/v1/lsr',
+        projects: '/api/v1/projects',
+        boms: '/api/v1/boms',
+        bomItems: '/api/v1/bom-items',
         processes: '/api/v1/processes',
         rawMaterials: '/api/v1/raw-materials',
+        vendors: '/api/v1/vendors',
       },
       timestamp: new Date().toISOString(),
     };

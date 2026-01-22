@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { Suspense, useState } from 'react';
+import { Suspense, useState, Component, ReactNode } from 'react';
 import { Loader2, Download, RotateCcw, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -17,6 +17,36 @@ import { apiClient } from '@/lib/api/client';
  * - Accessibility support
  * - Performance optimized
  */
+
+// Error Boundary for WebGL context issues
+class ErrorBoundary extends Component<
+  { children: ReactNode; onError: (error: string) => void },
+  { hasError: boolean }
+> {
+  constructor(props: { children: ReactNode; onError: (error: string) => void }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error) {
+    console.error('WebGL Error:', error);
+    const message = error.message.includes('WebGL') 
+      ? 'WebGL context lost. Your graphics card may be experiencing issues.'
+      : `3D rendering error: ${error.message}`;
+    this.props.onError(message);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return null; // Let parent handle error display
+    }
+    return this.props.children;
+  }
+}
 
 // Professional eDrawings-Style CAD Viewer
 const EDrawingsViewer = dynamic(
@@ -106,12 +136,14 @@ export function ModelViewer({ fileUrl, fileName, fileType, bomItemId, onMeasurem
             </div>
           </div>
         }>
-          <EDrawingsViewer
-            key={viewerKey}
-            fileUrl={fileUrl}
-            fileName={fileName}
-            onMeasurements={onMeasurements}
-          />
+          <ErrorBoundary onError={setError}>
+            <EDrawingsViewer
+              key={viewerKey}
+              fileUrl={fileUrl}
+              fileName={fileName}
+              onMeasurements={onMeasurements}
+            />
+          </ErrorBoundary>
         </Suspense>
 
         {/* Error Overlay */}
@@ -215,11 +247,13 @@ export function ModelViewer({ fileUrl, fileName, fileType, bomItemId, onMeasurem
             </div>
           </div>
         }>
-          <EDrawingsViewer
-            key={viewerKey}
-            fileUrl={fileUrl}
-            fileName={fileName}
-          />
+          <ErrorBoundary onError={setError}>
+            <EDrawingsViewer
+              key={viewerKey}
+              fileUrl={fileUrl}
+              fileName={fileName}
+            />
+          </ErrorBoundary>
         </Suspense>
 
         {/* Error Overlay */}

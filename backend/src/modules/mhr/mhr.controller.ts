@@ -12,7 +12,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { MHRService } from './mhr.service';
 import { CreateMHRDto, UpdateMHRDto, QueryMHRDto } from './dto/mhr.dto';
 import { MHRResponseDto, MHRListResponseDto } from './dto/mhr-response.dto';
-import { CurrentUser } from '../../common/decorators/user.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AccessToken } from '../../common/decorators/access-token.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 
@@ -23,11 +23,10 @@ export class MHRController {
   constructor(private readonly mhrService: MHRService) {}
 
   @Get()
-  @Public()
   @ApiOperation({ summary: 'Get all MHR records with pagination and filters' })
   @ApiResponse({ status: 200, description: 'MHR records retrieved successfully', type: MHRListResponseDto })
-  async findAll(@Query() query: QueryMHRDto, @CurrentUser() user?: any, @AccessToken() token?: string): Promise<MHRListResponseDto> {
-    return this.mhrService.findAll(query, user?.id, token);
+  async findAll(@Query() query: QueryMHRDto, @CurrentUser() user: any, @AccessToken() token: string): Promise<MHRListResponseDto> {
+    return this.mhrService.findAll(query, user.id, token);
   }
 
   @Get(':id')

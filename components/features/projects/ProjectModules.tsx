@@ -119,7 +119,7 @@ export function ProjectModules({ projectId, bomCount, firstBomId }: ProjectModul
     },
     {
       title: 'Supplier Evaluation',
-      description: 'Manage supplier shortlist, RFQ sent (SSG), and supplier audit processes',
+      description: 'Technical feasibility assessment, supplier shortlist management, and RFQ distribution',
       borderColor: 'border-l-4 border-l-orange-500',
       status: 'available' as const,
       onClick: () => {
@@ -128,7 +128,7 @@ export function ProjectModules({ projectId, bomCount, firstBomId }: ProjectModul
     },
     {
       title: 'Supplier Nomination',
-      description: 'Handle supplier negotiation and supplier analysis for nomination decisions',
+      description: 'Cost analysis, weighted scoring, and final supplier recommendation for nomination decisions',
       borderColor: 'border-l-4 border-l-teal-500',
       status: 'available' as const,
       onClick: () => {

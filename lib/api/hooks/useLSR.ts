@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { lsrApi, CreateLSRDto, UpdateLSRDto } from '../lsr';
 import { toast } from 'sonner';
 import { ApiError } from '../client';
+import { useMemo } from 'react';
 
 /**
  * Extract error message from ApiError or generic error
@@ -27,8 +28,14 @@ export const useLSR = (search?: string) => {
   return useQuery({
     queryKey: ['lsr', search],
     queryFn: () => lsrApi.getAll(search),
-    retry: 1,
-    staleTime: 30000,
+    retry: false, // 2026 Best Practice: Fail fast for background data
+    staleTime: 30 * 60 * 1000, // 30 minutes - reference data changes slowly
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    // Graceful error handling - don't throw errors to ErrorBoundary
+    throwOnError: false,
+    // Return empty array on error for graceful degradation
+    select: (data) => data ?? [],
   });
 };
 
@@ -40,12 +47,6 @@ export const useLSRById = (id: string | number) => {
   });
 };
 
-export const useLSRStatistics = () => {
-  return useQuery({
-    queryKey: ['lsr', 'statistics'],
-    queryFn: () => lsrApi.getStatistics(),
-  });
-};
 
 export const useCreateLSR = () => {
   const queryClient = useQueryClient();
@@ -134,4 +135,44 @@ export const useBulkCreateLSR = () => {
       }
     },
   });
+};
+
+export interface LSRStatistics {
+  total: number;
+  averageLHR: number;
+  byType: { [key: string]: number };
+}
+
+export const useLSRStatistics = (search?: string) => {
+  const { data: lsrData, ...queryResult } = useLSR(search);
+
+  const statistics = useMemo((): LSRStatistics => {
+    if (!lsrData || lsrData.length === 0) {
+      return {
+        total: 0,
+        averageLHR: 0,
+        byType: {},
+      };
+    }
+
+    const total = lsrData.length;
+    const totalLHR = lsrData.reduce((sum, entry) => sum + entry.lhr, 0);
+    const averageLHR = total > 0 ? totalLHR / total : 0;
+
+    const byType = lsrData.reduce((acc, entry) => {
+      acc[entry.labourType] = (acc[entry.labourType] || 0) + 1;
+      return acc;
+    }, {} as { [key: string]: number });
+
+    return {
+      total,
+      averageLHR,
+      byType,
+    };
+  }, [lsrData]);
+
+  return {
+    ...queryResult,
+    data: statistics,
+  };
 };

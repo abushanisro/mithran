@@ -9,7 +9,7 @@ export class LSRService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly logger: Logger,
-  ) {}
+  ) { }
 
   async create(createLSRDto: CreateLSRDto, userId: string, accessToken: string) {
     this.logger.log(`Creating LSR record for user: ${userId}`, 'LSRService');
@@ -190,50 +190,6 @@ export class LSRService {
     }
 
     return { message: 'LSR record deleted successfully' };
-  }
-
-  async getStatistics(userId: string, accessToken: string) {
-    this.logger.log('Fetching LSR statistics', 'LSRService');
-
-    const { data, error } = await this.supabaseService
-      .getClient(accessToken)
-      .from('lsr_records')
-      .select('labour_type, lhr');
-
-    if (error) {
-      this.logger.error(`Error fetching LSR statistics: ${error.message}`, 'LSRService');
-      throw new InternalServerErrorException(`Failed to fetch LSR statistics: ${error.message}`);
-    }
-
-    const records = data || [];
-    const total = records.length;
-
-    // Group by type
-    const byType = records.reduce((acc: any, record: any) => {
-      const type = record.labour_type;
-      if (!acc[type]) {
-        acc[type] = { type, count: 0, totalLHR: 0 };
-      }
-      acc[type].count++;
-      acc[type].totalLHR += parseFloat(record.lhr || 0);
-      return acc;
-    }, {});
-
-    const byTypeArray = Object.values(byType).map((item: any) => ({
-      type: item.type,
-      count: item.count.toString(),
-      avgLHR: (item.totalLHR / item.count).toFixed(2),
-    }));
-
-    // Calculate average LHR
-    const totalLHR = records.reduce((sum, record) => sum + parseFloat(record.lhr || 0), 0);
-    const averageLHR = total > 0 ? totalLHR / total : 0;
-
-    return {
-      total,
-      byType: byTypeArray,
-      averageLHR: parseFloat(averageLHR.toFixed(2)),
-    };
   }
 
   async bulkCreate(data: CreateLSRDto[], userId: string, accessToken: string) {

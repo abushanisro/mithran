@@ -111,8 +111,8 @@ No field saves, no formula saves, no partial updates. Everything or nothing.
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  STEP 1: Update calculator metadata                                     │
 │    UPDATE calculators SET name = ?, description = ? WHERE id = ?       │
-│    ✅ Success → Continue                                                │
-│    ❌ Fail    → Throw error, STOP                                       │
+│    Success → Continue                                                │
+│    Fail    → Throw error, STOP                                       │
 └─────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
@@ -120,8 +120,8 @@ No field saves, no formula saves, no partial updates. Everything or nothing.
 │  STEP 2: Replace ALL fields (if provided)                              │
 │    DELETE FROM calculator_fields WHERE calculator_id = ?               │
 │    INSERT INTO calculator_fields (calculator_id, ...) VALUES ...       │
-│    ✅ Success → Continue                                                │
-│    ❌ Fail    → Rollback Step 1, STOP                                   │
+│    Success → Continue                                                │
+│    Fail    → Rollback Step 1, STOP                                   │
 └─────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
@@ -129,8 +129,8 @@ No field saves, no formula saves, no partial updates. Everything or nothing.
 │  STEP 3: Replace ALL formulas (if provided)                            │
 │    DELETE FROM calculator_formulas WHERE calculator_id = ?             │
 │    INSERT INTO calculator_formulas (calculator_id, ...) VALUES ...     │
-│    ✅ Success → COMMIT TRANSACTION                                      │
-│    ❌ Fail    → Rollback Steps 1 & 2, STOP                              │
+│    Success → COMMIT TRANSACTION                                      │
+│    Fail    → Rollback Steps 1 & 2, STOP                              │
 └─────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼

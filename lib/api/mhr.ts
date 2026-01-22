@@ -117,7 +117,7 @@ export const mhrApi = {
   /**
    * Get all MHR records
    */
-  getAll: async (query?: MHRQuery): Promise<MHRListResponse> => {
+  getAll: async (query?: MHRQuery): Promise<MHRListResponse | null> => {
     const params = new URLSearchParams();
     if (query?.search) params.append('search', query.search);
     if (query?.location) params.append('location', query.location);
@@ -126,8 +126,13 @@ export const mhrApi = {
     if (query?.limit) params.append('limit', query.limit.toString());
 
     const queryString = params.toString();
+    // 2026 Best Practice: Silent mode for background/optional data
     return apiClient.get<MHRListResponse>(
       `/mhr${queryString ? `?${queryString}` : ''}`,
+      {
+        silent: true, // Don't show error toasts for background data
+        retry: false, // Fail fast - don't retry background data
+      },
     );
   },
 

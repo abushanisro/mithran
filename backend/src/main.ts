@@ -52,7 +52,18 @@ async function bootstrap() {
   );
 
   app.enableCors({
-    origin: configService.get('CORS_ORIGIN', 'http://localhost:3000'),
+    origin: (requestOrigin, callback) => {
+      const allowedOrigins = [
+        configService.get('CORS_ORIGIN', 'http://localhost:3000'),
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+      ];
+      if (!requestOrigin || allowedOrigins.includes(requestOrigin) || allowedOrigins.some(o => requestOrigin.startsWith(o))) {
+        callback(null, true);
+      } else {
+        callback(null, false);
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: [
@@ -65,6 +76,12 @@ async function bootstrap() {
       'x-client-version',
       'X-Client-Platform',
       'x-client-platform',
+      // W3C Trace Context headers for distributed tracing
+      'traceparent',
+      'tracestate',
+      // Idempotency headers
+      'Idempotency-Key',
+      'idempotency-key',
     ],
     exposedHeaders: ['X-Request-ID', 'X-Correlation-ID'],
     maxAge: 3600, // Cache preflight for 1 hour

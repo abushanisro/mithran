@@ -41,7 +41,6 @@ export function ProcessCostDialog({
   editData,
 }: ProcessCostDialogProps) {
   const [opNbr, setOpNbr] = useState<number>(0);
-  const [description, setDescription] = useState<string>('');
   const [location, setLocation] = useState<string>('');
   // Hierarchical selections
   const [selectedGroup, setSelectedGroup] = useState<string>('');
@@ -61,6 +60,10 @@ export function ProcessCostDialog({
   const [scrap, setScrap] = useState<number>(0);
   const [machineValue, setMachineValue] = useState<number>(0);
   const [totalCost, setTotalCost] = useState<number>(0);
+
+  // Preserve facilityId and facilityRateId from editData for updates
+  const [facilityId, setFacilityId] = useState<string | undefined>(undefined);
+  const [facilityRateId, setFacilityRateId] = useState<string | undefined>(undefined);
 
   // Calculator state
   const [calculatorOpen, setCalculatorOpen] = useState<boolean>(false);
@@ -128,10 +131,6 @@ export function ProcessCostDialog({
     return processCalculatorMappings.mappings;
   }, [processCalculatorMappings]);
 
-  // Get selected calculator details
-  const selectedProcessCalculator = useMemo(() => {
-    return calculatorsData?.calculators?.find((c: any) => c.id === selectedProcessCalculatorId);
-  }, [calculatorsData, selectedProcessCalculatorId]);
 
   // Get unique locations from MHR and LSR data
   const locations = useMemo(() => {
@@ -168,23 +167,6 @@ export function ProcessCostDialog({
     return filteredLSR.find((r: any) => String(r.id) === String(selectedLSRId));
   }, [filteredLSR, selectedLSRId]);
 
-  // Debug logging
-  useEffect(() => {
-    if (hierarchyData) {
-      console.log('[ProcessCostDialog] Hierarchy Data:', hierarchyData);
-      console.log('[ProcessCostDialog] All Mappings:', allMappingsData?.mappings);
-      console.log('[ProcessCostDialog] Selected Group:', selectedGroup);
-      console.log('[ProcessCostDialog] Filtered Process Routes:', processRoutes);
-      console.log('[ProcessCostDialog] Selected Route:', selectedRoute);
-      console.log('[ProcessCostDialog] Filtered Operations:', operations);
-    }
-  }, [hierarchyData, allMappingsData, selectedGroup, selectedRoute, processRoutes, operations]);
-
-  useEffect(() => {
-    if (processCalculatorMappings) {
-      console.log('[ProcessCostDialog] Calculator Mappings:', processCalculatorMappings);
-    }
-  }, [processCalculatorMappings]);
 
   useEffect(() => {
     if (hierarchyError) {
@@ -249,13 +231,12 @@ export function ProcessCostDialog({
     }
   }, [calculatorOpen]);
 
-  // Load edit data
+  // Load edit data (wait for data to be loaded before populating)
   useEffect(() => {
-    if (editData) {
+    if (editData && open && !isLoadingHierarchy && !isLoadingMHR && !isLoadingLSR) {
       setOpNbr(editData.opNbr || 0);
-      setDescription(editData.description || '');
       setLocation(editData.location || '');
-      setSelectedGroup(editData.group || '');
+      setSelectedGroup(editData.processGroup || '');
       setSelectedRoute(editData.processRoute || '');
       setSelectedOperation(editData.operation || '');
       setSelectedProcessCalculatorId(editData.processCalculatorId || '');
@@ -269,10 +250,11 @@ export function ProcessCostDialog({
       setPartsPerCycle(editData.partsPerCycle || 1);
       setScrap(editData.scrap || 0);
       setMachineValue(editData.machineValue || 0);
-    } else {
+      setFacilityId(editData.facilityId);
+      setFacilityRateId(editData.facilityRateId);
+    } else if (!editData && open) {
       // Reset for new entry
       setOpNbr(0);
-      setDescription('');
       setLocation('');
       setSelectedGroup('');
       setSelectedRoute('');
@@ -288,8 +270,10 @@ export function ProcessCostDialog({
       setPartsPerCycle(1);
       setScrap(0);
       setMachineValue(0);
+      setFacilityId(undefined);
+      setFacilityRateId(undefined);
     }
-  }, [editData, open]);
+  }, [editData, open, isLoadingHierarchy, isLoadingMHR, isLoadingLSR]);
 
   // Calculate total cost using MHR and LSR
   useEffect(() => {
@@ -330,7 +314,6 @@ export function ProcessCostDialog({
     onSubmit({
       id: editData?.id,
       opNbr,
-      description,
       location,
       group: selectedGroup,
       processRoute: selectedRoute,
@@ -339,11 +322,10 @@ export function ProcessCostDialog({
       mhrId: selectedMHRId,
       lsrId: selectedLSRId,
       machineName: selectedMHR?.machineName || '',
-      labourType: selectedLSR?.labourType || '',
       operationName: selectedOperation || '',
       processRouteName: selectedRoute || '',
       machineRate: selectedMHR?.calculations.totalMachineHourRate || 0,
-      labourRate: selectedLSR?.lhr || 0,
+      laborRate: selectedLSR?.lhr || 0,
       setupManning,
       setupTime,
       batchSize,
@@ -353,6 +335,8 @@ export function ProcessCostDialog({
       scrap,
       machineValue,
       totalCost,
+      facilityId,
+      facilityRateId,
     });
 
     onOpenChange(false);
@@ -373,28 +357,17 @@ export function ProcessCostDialog({
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
             {/* Op Nbr */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Op Nbr</Label>
-                <Input
-                  type="number"
-                  value={opNbr || ''}
-                  onChange={(e) => setOpNbr(parseInt(e.target.value) || 0)}
-                  placeholder="Enter operation number"
-                />
-              </div>
-
-              {/* Description */}
-              <div className="space-y-2">
-                <Label>Description</Label>
-                <Input
-                  type="text"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Enter process description"
-                  required
-                />
-              </div>
+            <div className="space-y-2">
+              <Label>Op Nbr</Label>
+              <Input
+                type="number"
+                value={opNbr}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setOpNbr(val === '' ? 0 : parseInt(val) || 0);
+                }}
+                placeholder="Enter operation number"
+              />
             </div>
 
             {/* Error State */}
@@ -570,70 +543,6 @@ export function ProcessCostDialog({
                         </p>
                       )}
                     </div>
-
-                    {/* 4. Process Calculator (Optional) */}
-                    <div className="space-y-2">
-                      <Label className="font-semibold">
-                        4. Process Calculator
-                        <span className="text-muted-foreground text-xs ml-2">(Optional - Use for complex calculations)</span>
-                      </Label>
-                      <Select
-                        value={selectedProcessCalculatorId}
-                        onValueChange={(value) => {
-                          setSelectedProcessCalculatorId(value);
-                        }}
-                        disabled={!selectedOperation}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select calculator">
-                            {selectedProcessCalculator && (
-                              <div className="flex items-center">
-                                <CalculatorIcon className="h-4 w-4 mr-2" />
-                                {selectedProcessCalculator.name}
-                              </div>
-                            )}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableCalculators && availableCalculators.length > 0 ? (
-                            <>
-                              {availableCalculators.map((mapping: any) => (
-                                <SelectItem key={mapping.calculatorId} value={mapping.calculatorId}>
-                                  {mapping.calculatorName || 'Calculator'} (Mapped)
-                                </SelectItem>
-                              ))}
-                              {calculatorsData?.calculators && calculatorsData.calculators.length > 0 && (
-                                <>
-                                  <SelectItem key="divider" value="divider" disabled>
-                                    ─────────
-                                  </SelectItem>
-                                  {calculatorsData.calculators.map((calc: any) => (
-                                    <SelectItem key={calc.id} value={calc.id}>
-                                      {calc.name}
-                                    </SelectItem>
-                                  ))}
-                                </>
-                              )}
-                            </>
-                          ) : calculatorsData?.calculators && calculatorsData.calculators.length > 0 ? (
-                            calculatorsData.calculators.map((calc: any) => (
-                              <SelectItem key={calc.id} value={calc.id}>
-                                {calc.name}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <SelectItem key="no-calc" value="none" disabled>
-                              No calculators available
-                            </SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                      {selectedProcessCalculator && (
-                        <div className="text-xs text-muted-foreground mt-1 p-2 bg-secondary/50 rounded">
-                          {selectedProcessCalculator.description || 'Calculator selected'}
-                        </div>
-                      )}
-                    </div>
                   </CardContent>
                 </Card>
 
@@ -646,7 +555,7 @@ export function ProcessCostDialog({
                     {/* Location Filter */}
                     <div className="space-y-2">
                       <Label>Location <span className="text-muted-foreground text-xs">(Optional)</span></Label>
-                      <Select value={location || undefined} onValueChange={setLocation}>
+                      <Select value={location} onValueChange={setLocation}>
                         <SelectTrigger>
                           <SelectValue placeholder="All locations" />
                         </SelectTrigger>
@@ -659,6 +568,37 @@ export function ProcessCostDialog({
                           ))}
                         </SelectContent>
                       </Select>
+                    </div>
+
+                    {/* Machine Value */}
+                    <div className="space-y-2">
+                      <Label>Machine Value</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={machineValue}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setMachineValue(val === '' ? 0 : parseFloat(val) || 0);
+                          }}
+                          placeholder="Enter machine value"
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => {
+                            setCalculatorTarget('machineValue');
+                            setCalculatorOpen(true);
+                          }}
+                          title="Use Calculator"
+                        >
+                          <CalculatorIcon className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
 
                     {/* Machine (MHR) Selection */}
@@ -700,34 +640,6 @@ export function ProcessCostDialog({
                         </SelectContent>
                       </Select>
                     </div>
-
-                    {/* Machine Value */}
-                    <div className="space-y-2">
-                      <Label>Machine Value</Label>
-                      <div className="flex gap-2">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={machineValue || ''}
-                          onChange={(e) => setMachineValue(parseFloat(e.target.value) || 0)}
-                          placeholder="Enter machine value"
-                          className="flex-1"
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          onClick={() => {
-                            setCalculatorTarget('machineValue');
-                            setCalculatorOpen(true);
-                          }}
-                          title="Use Calculator"
-                        >
-                          <CalculatorIcon className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
                   </CardContent>
                 </Card>
               </>
@@ -759,8 +671,11 @@ export function ProcessCostDialog({
                       type="number"
                       step="0.01"
                       min="0"
-                      value={setupManning || ''}
-                      onChange={(e) => setSetupManning(parseFloat(e.target.value) || 0)}
+                      value={setupManning}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSetupManning(val === '' ? 0 : parseFloat(val) || 0);
+                      }}
                       placeholder="Enter setup manning"
                     />
                   </div>
@@ -771,8 +686,11 @@ export function ProcessCostDialog({
                       type="number"
                       step="0.01"
                       min="0"
-                      value={setupTime || ''}
-                      onChange={(e) => setSetupTime(parseFloat(e.target.value) || 0)}
+                      value={setupTime}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSetupTime(val === '' ? 0 : parseFloat(val) || 0);
+                      }}
                       placeholder="Enter setup time"
                     />
                   </div>
@@ -785,8 +703,11 @@ export function ProcessCostDialog({
                       type="number"
                       step="0.01"
                       min="1"
-                      value={batchSize || ''}
-                      onChange={(e) => setBatchSize(parseFloat(e.target.value) || 1)}
+                      value={batchSize}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setBatchSize(val === '' ? 1 : parseFloat(val) || 1);
+                      }}
                       placeholder="Enter batch size"
                       required
                     />
@@ -798,8 +719,11 @@ export function ProcessCostDialog({
                       type="number"
                       step="0.01"
                       min="0"
-                      value={heads || ''}
-                      onChange={(e) => setHeads(parseFloat(e.target.value) || 0)}
+                      value={heads}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setHeads(val === '' ? 0 : parseFloat(val) || 0);
+                      }}
                       placeholder="Enter number of heads"
                     />
                   </div>
@@ -813,8 +737,11 @@ export function ProcessCostDialog({
                         type="number"
                         step="0.01"
                         min="1"
-                        value={cycleTime || ''}
-                        onChange={(e) => setCycleTime(parseFloat(e.target.value) || 0)}
+                        value={cycleTime}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCycleTime(val === '' ? 0 : parseFloat(val) || 0);
+                        }}
                         placeholder="Enter cycle time"
                         required
                         className="flex-1"
@@ -840,8 +767,11 @@ export function ProcessCostDialog({
                       type="number"
                       step="0.01"
                       min="1"
-                      value={partsPerCycle || ''}
-                      onChange={(e) => setPartsPerCycle(parseFloat(e.target.value) || 1)}
+                      value={partsPerCycle}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setPartsPerCycle(val === '' ? 1 : parseFloat(val) || 1);
+                      }}
                       placeholder="Enter parts per cycle"
                       required
                     />
@@ -855,8 +785,11 @@ export function ProcessCostDialog({
                     step="0.01"
                     min="0"
                     max="100"
-                    value={scrap || ''}
-                    onChange={(e) => setScrap(parseFloat(e.target.value) || 0)}
+                    value={scrap}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setScrap(val === '' ? 0 : parseFloat(val) || 0);
+                    }}
                     placeholder="Enter scrap percentage"
                   />
                 </div>

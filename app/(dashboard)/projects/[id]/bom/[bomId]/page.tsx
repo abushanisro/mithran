@@ -368,7 +368,6 @@ export default function
           }
         }
 
-        console.log('Items to import:', itemsToImport);
         toast.success(`Parsed ${itemsToImport.length} items. Import functionality coming soon!`);
 
         // TODO: Implement actual import API call here

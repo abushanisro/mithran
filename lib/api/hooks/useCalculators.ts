@@ -4,6 +4,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { calculatorsApi } from '../calculators';
+import { useAuth } from '@/lib/providers/auth';
 import type {
   CreateCalculatorData,
   UpdateCalculatorData,
@@ -40,11 +41,15 @@ export const calculatorKeys = {
 // ========================================
 
 export function useCalculators(query?: CalculatorQuery, options?: { enabled?: boolean }) {
+  const { user, loading: authLoading } = useAuth();
+
   return useQuery({
     queryKey: calculatorKeys.list(query),
     queryFn: () => calculatorsApi.getAll(query),
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    enabled: options?.enabled !== false,
+    staleTime: 30 * 60 * 1000, // 30 minutes - reference data
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    enabled: !authLoading && !!user && options?.enabled !== false,
   });
 }
 

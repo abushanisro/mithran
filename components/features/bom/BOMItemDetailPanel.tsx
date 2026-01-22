@@ -45,11 +45,15 @@ export function BOMItemDetailPanel({ item, onClose, onUpdate, preferredView = '3
       try {
         if (item.file2dPath) {
           const response = await apiClient.get<{ url: string }>(`/bom-items/${item.id}/file-url/2d`);
-          setFile2dUrl(response.url);
+          if (response) {
+            setFile2dUrl(response.url);
+          }
         }
         if (item.file3dPath) {
           const response = await apiClient.get<{ url: string }>(`/bom-items/${item.id}/file-url/3d`);
-          setFile3dUrl(response.url);
+          if (response) {
+            setFile3dUrl(response.url);
+          }
         }
       } catch (error) {
         console.error('Failed to load file URLs:', error);
@@ -100,11 +104,15 @@ export function BOMItemDetailPanel({ item, onClose, onUpdate, preferredView = '3
         try {
           if (uploaded2d && updatedItem.file2dPath) {
             const response2d = await apiClient.get<{ url: string }>(`/bom-items/${item.id}/file-url/2d`);
-            setFile2dUrl(response2d.url);
+            if (response2d) {
+              setFile2dUrl(response2d.url);
+            }
           }
           if (uploaded3d && updatedItem.file3dPath) {
             const response3d = await apiClient.get<{ url: string }>(`/bom-items/${item.id}/file-url/3d`);
-            setFile3dUrl(response3d.url);
+            if (response3d) {
+              setFile3dUrl(response3d.url);
+            }
           }
         } catch (error) {
           console.error('Failed to load file URLs after upload:', error);

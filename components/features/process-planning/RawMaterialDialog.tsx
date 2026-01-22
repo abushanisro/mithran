@@ -8,6 +8,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
 import {
@@ -29,12 +30,14 @@ interface RawMaterialDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: any) => void;
   estimateId?: string;
+  editData?: any;
 }
 
 export function RawMaterialDialog({
   open,
   onOpenChange,
   onSubmit,
+  editData,
 }: RawMaterialDialogProps) {
   const [materialGroup, setMaterialGroup] = useState<string>('');
   const [location, setLocation] = useState<string>('');
@@ -103,17 +106,6 @@ export function RawMaterialDialog({
   const { data: filterOptions, isLoading: isLoadingOptions } = useRawMaterialFilterOptions();
 
   // Debug logging
-  useEffect(() => {
-    if (filterOptions) {
-      console.log('[RawMaterialDialog] Filter Options:', filterOptions);
-    }
-  }, [filterOptions]);
-
-  useEffect(() => {
-    if (rawMaterialsData) {
-      console.log('[RawMaterialDialog] Raw Materials Data:', rawMaterialsData);
-    }
-  }, [rawMaterialsData]);
 
   // Get unique material groups
   const materialGroups = useMemo(() => {
@@ -144,10 +136,38 @@ export function RawMaterialDialog({
     return materials.find(m => m.id === selectedMaterialId);
   }, [selectedMaterialId, materials]);
 
-  // Reset material selection when filters change
+  // Load edit data first (wait for data to be loaded AND options to be available)
   useEffect(() => {
-    setSelectedMaterialId('');
-  }, [materialGroup, location]);
+    if (editData && open && !isLoading && !isLoadingOptions && materialGroups.length > 0) {
+      setMaterialGroup(editData.materialGroup || '');
+      setLocation(editData.location || '');
+      setSelectedQuarter(editData.quarter || 'q1');
+      setSelectedMaterialId(editData.materialId || '');
+      setGrossUsage(editData.grossUsage || 0);
+      setNetUsage(editData.netUsage || 0);
+      setScrap(editData.scrap ?? 0);
+      setOverhead(editData.overhead ?? 0);
+      setTotalCost(editData.totalCost || 0);
+    } else if (!editData && open) {
+      // Reset for new entry
+      setMaterialGroup('');
+      setLocation('');
+      setSelectedQuarter('q1');
+      setSelectedMaterialId('');
+      setGrossUsage(0);
+      setNetUsage(0);
+      setScrap(0);
+      setOverhead(0);
+      setTotalCost(0);
+    }
+  }, [editData, open, isLoading, isLoadingOptions, materialGroups]);
+
+  // Reset material selection when filters change (but not during initial load with editData)
+  useEffect(() => {
+    if (!editData) {
+      setSelectedMaterialId('');
+    }
+  }, [materialGroup, location, editData]);
 
   // Calculate total cost based on selected quarter
   useEffect(() => {
@@ -176,32 +196,76 @@ export function RawMaterialDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedMaterialId || !selectedMaterial || grossUsage <= 0) {
-      alert('Please select a material and enter gross usage');
-      return;
+
+    // For editing, we can submit even if selectedMaterial is not loaded yet
+    if (editData) {
+      // Use editData information if selectedMaterial is not available
+      const materialInfo = selectedMaterial || {
+        id: editData.materialId,
+        material: editData.material,
+        materialGroup: editData.materialGroup,
+        materialGrade: editData.materialGrade || '',
+        location: editData.location || '',
+        q1Cost: 0,
+        q2Cost: 0,
+        q3Cost: 0,
+        q4Cost: 0,
+      };
+
+      onSubmit({
+        id: editData.id,
+        materialId: editData.materialId || selectedMaterialId,
+        materialName: materialInfo.material,
+        materialGroup: materialInfo.materialGroup,
+        material: materialInfo.material,
+        materialGrade: materialInfo.materialGrade || '',
+        location: materialInfo.location || '',
+        quarter: selectedQuarter,
+        unitCost: editData.unitCost, // Use the stored unit cost from editData
+        grossUsage,
+        netUsage,
+        scrap,
+        overhead,
+        totalCost,
+      });
+    } else {
+      // For new material, require selectedMaterial
+      if (!materialGroup) {
+        alert('Please select a material group');
+        return;
+      }
+      if (!selectedMaterialId || !selectedMaterial) {
+        alert('Please select a material');
+        return;
+      }
+      if (grossUsage <= 0) {
+        alert('Please enter gross usage');
+        return;
+      }
+
+      // Get unit cost from selected quarter
+      const unitCost =
+        selectedQuarter === 'q1' ? selectedMaterial.q1Cost :
+        selectedQuarter === 'q2' ? selectedMaterial.q2Cost :
+        selectedQuarter === 'q3' ? selectedMaterial.q3Cost :
+        selectedQuarter === 'q4' ? selectedMaterial.q4Cost : 0;
+
+      onSubmit({
+        materialId: selectedMaterialId,
+        materialName: selectedMaterial.material,
+        materialGroup: selectedMaterial.materialGroup,
+        material: selectedMaterial.material,
+        materialGrade: selectedMaterial.materialGrade || '',
+        location: selectedMaterial.location || '',
+        quarter: selectedQuarter,
+        unitCost,
+        grossUsage,
+        netUsage,
+        scrap,
+        overhead,
+        totalCost,
+      });
     }
-
-    // Get unit cost from selected quarter
-    const unitCost =
-      selectedQuarter === 'q1' ? selectedMaterial.q1Cost :
-      selectedQuarter === 'q2' ? selectedMaterial.q2Cost :
-      selectedQuarter === 'q3' ? selectedMaterial.q3Cost :
-      selectedQuarter === 'q4' ? selectedMaterial.q4Cost : 0;
-
-    onSubmit({
-      materialId: selectedMaterialId,
-      materialGroup: selectedMaterial.materialGroup,
-      material: selectedMaterial.material,
-      materialGrade: selectedMaterial.materialGrade || '',
-      location: selectedMaterial.location || '',
-      quarter: selectedQuarter,
-      unitCost,
-      grossUsage,
-      netUsage,
-      scrap,
-      overhead,
-      totalCost,
-    });
 
     // Reset form
     setMaterialGroup('');
@@ -220,7 +284,12 @@ export function RawMaterialDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-primary">Create Material Cost</DialogTitle>
+          <DialogTitle className="text-primary">
+            {editData ? 'Edit Material Cost' : 'Create Material Cost'}
+          </DialogTitle>
+          <DialogDescription>
+            Select raw materials and calculate costs with weight and scrap factors
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
@@ -287,7 +356,7 @@ export function RawMaterialDialog({
                       Location <span className="text-muted-foreground text-xs">(Optional)</span>
                     </label>
                     <div className="flex gap-2">
-                      <Select value={location || undefined} onValueChange={setLocation}>
+                      <Select value={location} onValueChange={setLocation}>
                         <SelectTrigger>
                           <SelectValue placeholder="All locations" />
                         </SelectTrigger>
@@ -321,184 +390,228 @@ export function RawMaterialDialog({
                 </div>
 
                 {/* Material Selection */}
-                {materialGroup && materials.length > 0 && (
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold">Material</label>
-                    <Select value={selectedMaterialId} onValueChange={setSelectedMaterialId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select material" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {materials.map((material) => (
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold">
+                    Material
+                    {!materialGroup && (
+                      <span className="ml-2 text-xs text-muted-foreground font-normal">
+                        (Select material group first)
+                      </span>
+                    )}
+                  </label>
+                  <Select
+                    value={selectedMaterialId}
+                    onValueChange={setSelectedMaterialId}
+                    disabled={!materialGroup}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={materialGroup ? "Select material" : "Select material group first"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {materials.length > 0 ? (
+                        materials.map((material) => (
                           <SelectItem key={material.id} value={material.id}>
                             {material.material} {material.materialGrade ? `(${material.materialGrade})` : ''}
                             {material.location ? ` - ${material.location}` : ''}
                           </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
+                        ))
+                      ) : (
+                        <SelectItem key="no-materials" value="none" disabled>
+                          {materialGroup ? 'No materials available' : 'Select material group first'}
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
               </>
             )}
 
             {/* Material Details and Quarter Selection */}
             {selectedMaterial && (
-              <>
-                <div className="space-y-2 bg-secondary/20 p-4 rounded-lg">
-                  <label className="text-sm font-semibold block">Material Details</label>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="space-y-2 bg-secondary/20 p-4 rounded-lg">
+                <label className="text-sm font-semibold block">Material Details</label>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Material:</span>
+                    <span className="ml-2 font-medium">{selectedMaterial.material}</span>
+                  </div>
+                  {selectedMaterial.materialGrade && (
                     <div>
-                      <span className="text-muted-foreground">Material:</span>
-                      <span className="ml-2 font-medium">{selectedMaterial.material}</span>
+                      <span className="text-muted-foreground">Grade:</span>
+                      <span className="ml-2 font-medium">{selectedMaterial.materialGrade}</span>
                     </div>
-                    {selectedMaterial.materialGrade && (
-                      <div>
-                        <span className="text-muted-foreground">Grade:</span>
-                        <span className="ml-2 font-medium">{selectedMaterial.materialGrade}</span>
-                      </div>
-                    )}
-                    {selectedMaterial.location && (
-                      <div>
-                        <span className="text-muted-foreground">Location:</span>
-                        <span className="ml-2 font-medium">{selectedMaterial.location}</span>
-                      </div>
-                    )}
-                    {selectedMaterial.densityKgM3 && (
-                      <div>
-                        <span className="text-muted-foreground">Density:</span>
-                        <span className="ml-2 font-medium">{selectedMaterial.densityKgM3} kg/m³</span>
-                      </div>
-                    )}
-                  </div>
+                  )}
+                  {selectedMaterial.location && (
+                    <div>
+                      <span className="text-muted-foreground">Location:</span>
+                      <span className="ml-2 font-medium">{selectedMaterial.location}</span>
+                    </div>
+                  )}
+                  {selectedMaterial.densityKgM3 && (
+                    <div>
+                      <span className="text-muted-foreground">Density:</span>
+                      <span className="ml-2 font-medium">{selectedMaterial.densityKgM3} kg/m³</span>
+                    </div>
+                  )}
                 </div>
-
-                {/* Quarter Selection with Cost Preview */}
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold">Select Quarter & Cost</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {[
-                      { value: 'q1', label: 'Q1', cost: selectedMaterial.q1Cost },
-                      { value: 'q2', label: 'Q2', cost: selectedMaterial.q2Cost },
-                      { value: 'q3', label: 'Q3', cost: selectedMaterial.q3Cost },
-                      { value: 'q4', label: 'Q4', cost: selectedMaterial.q4Cost },
-                    ].map(({ value, label, cost }) => (
-                      <button
-                        key={value}
-                        type="button"
-                        onClick={() => setSelectedQuarter(value)}
-                        className={`p-3 border-2 rounded-lg text-left transition-all ${
-                          selectedQuarter === value
-                            ? 'border-primary bg-primary/10'
-                            : 'border-border hover:border-primary/50'
-                        }`}
-                      >
-                        <div className="text-sm font-semibold">{label}</div>
-                        <div className="text-lg font-bold text-primary">
-                          ₹{cost?.toFixed(2) || 'N/A'}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </>
+              </div>
             )}
+
+            {/* Quarter Selection with Cost Preview */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold">Select Quarter & Cost</label>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { value: 'q1', label: 'Q1', cost: selectedMaterial?.q1Cost },
+                  { value: 'q2', label: 'Q2', cost: selectedMaterial?.q2Cost },
+                  { value: 'q3', label: 'Q3', cost: selectedMaterial?.q3Cost },
+                  { value: 'q4', label: 'Q4', cost: selectedMaterial?.q4Cost },
+                ].map(({ value, label, cost }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setSelectedQuarter(value)}
+                    disabled={!selectedMaterialId && !editData}
+                    className={`p-3 border-2 rounded-lg text-left transition-all ${
+                      selectedQuarter === value
+                        ? 'border-primary bg-primary/10'
+                        : 'border-border hover:border-primary/50'
+                    } ${!selectedMaterialId && !editData ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <div className="text-sm font-semibold">{label}</div>
+                    <div className="text-lg font-bold text-primary">
+                      {cost ? `₹${cost.toFixed(2)}` : 'N/A'}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {/* Usage and Cost Fields */}
-            {selectedMaterialId && selectedMaterial && (
-              <>
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold">Gross Usage</label>
-                  <div className="flex gap-2">
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={grossUsage || ''}
-                      onChange={(e) => setGrossUsage(parseFloat(e.target.value) || 0)}
-                      placeholder="Enter gross usage"
-                      className="flex-1"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => {
-                        setCalculatorTarget('grossUsage');
-                        setCalculatorOpen(true);
-                      }}
-                      title="Use Calculator"
-                    >
-                      <CalculatorIcon className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold">Net Usage</label>
-                  <div className="flex gap-2">
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={netUsage || ''}
-                      onChange={(e) => setNetUsage(parseFloat(e.target.value) || 0)}
-                      placeholder="Enter net usage"
-                      className="flex-1"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => {
-                        setCalculatorTarget('netUsage');
-                        setCalculatorOpen(true);
-                      }}
-                      title="Use Calculator"
-                    >
-                      <CalculatorIcon className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold">Scrap %</label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={scrap || ''}
-                    onChange={(e) => setScrap(parseFloat(e.target.value) || 0)}
-                    placeholder="Enter scrap percentage"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold">Overhead %</label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={overhead || ''}
-                    onChange={(e) => setOverhead(parseFloat(e.target.value) || 0)}
-                    placeholder="Enter overhead percentage"
-                  />
-                </div>
-
-                {/* Total Cost Display */}
-                <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
-                  <label className="text-sm font-semibold block mb-2">Total Cost</label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">INR</span>
-                    <span className="text-lg font-bold">₹{totalCost.toFixed(2)}</span>
-                  </div>
-                </div>
-              </>
+            {!selectedMaterialId && !editData && (
+              <div className="bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-xs text-blue-700 dark:text-blue-300">
+                Select a material above to enable usage and cost fields
+              </div>
             )}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold">Gross Usage</label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={grossUsage === 0 ? '' : grossUsage}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setGrossUsage(val === '' ? 0 : parseFloat(val) || 0);
+                    }}
+                    placeholder="Enter gross usage"
+                    className="flex-1"
+                    disabled={!selectedMaterialId && !editData}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      setCalculatorTarget('grossUsage');
+                      setCalculatorOpen(true);
+                    }}
+                    title="Use Calculator"
+                    disabled={!selectedMaterialId && !editData}
+                  >
+                    <CalculatorIcon className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold">Net Usage</label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={netUsage === 0 ? '' : netUsage}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setNetUsage(val === '' ? 0 : parseFloat(val) || 0);
+                    }}
+                    placeholder="Enter net usage"
+                    className="flex-1"
+                    disabled={!selectedMaterialId && !editData}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      setCalculatorTarget('netUsage');
+                      setCalculatorOpen(true);
+                    }}
+                    title="Use Calculator"
+                    disabled={!selectedMaterialId && !editData}
+                  >
+                    <CalculatorIcon className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold">Scrap %</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={scrap === 0 ? '' : scrap}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setScrap(val === '' ? 0 : parseFloat(val) || 0);
+                  }}
+                  placeholder="Enter scrap percentage"
+                  disabled={!selectedMaterialId && !editData}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold">Overhead %</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={overhead === 0 ? '' : overhead}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setOverhead(val === '' ? 0 : parseFloat(val) || 0);
+                  }}
+                  placeholder="Enter overhead percentage"
+                  disabled={!selectedMaterialId && !editData}
+                />
+              </div>
+            </div>
+
+            {/* Total Cost Display */}
+            <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+              <label className="text-sm font-semibold block mb-2">Total Cost</label>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">INR</span>
+                <span className="text-lg font-bold">₹{totalCost.toFixed(2)}</span>
+              </div>
+            </div>
           </div>
 
           <DialogFooter className="mt-6">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={!selectedMaterialId || grossUsage <= 0}>
-              Add Material
+            <Button
+              type="submit"
+              disabled={
+                editData
+                  ? grossUsage <= 0
+                  : !materialGroup || !selectedMaterialId || grossUsage <= 0
+              }
+            >
+              {editData ? 'Update Material' : 'Add Material'}
             </Button>
           </DialogFooter>
         </form>

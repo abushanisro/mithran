@@ -11,6 +11,7 @@ import type {
 } from '../projects';
 import { ApiError } from '../client';
 import { toast } from 'sonner';
+import { useAuthEnabled, useAuthEnabledWith } from './useAuthEnabled';
 
 export const projectKeys = {
   all: ['projects'] as const,
@@ -26,7 +27,7 @@ export function useProjects(query?: ProjectQuery, options?: { enabled?: boolean 
     queryKey: projectKeys.list(query),
     queryFn: () => projectsApi.getAll(query),
     staleTime: 1000 * 60 * 5, // 5 minutes
-    enabled: options?.enabled !== false,
+    enabled: useAuthEnabled(options),
   });
 }
 
@@ -34,7 +35,7 @@ export function useProject(id: string, options?: { enabled?: boolean; retry?: bo
   return useQuery({
     queryKey: projectKeys.detail(id),
     queryFn: () => projectsApi.getById(id),
-    enabled: options?.enabled !== false && !!id,
+    enabled: useAuthEnabledWith(!!id, options),
     staleTime: 1000 * 60 * 5,
     // Don't retry on 404 errors - the project genuinely doesn't exist
     retry: (failureCount, error) => {
@@ -58,7 +59,7 @@ export function useProjectCostAnalysis(id: string) {
   return useQuery({
     queryKey: projectKeys.costAnalysis(id),
     queryFn: () => projectsApi.getCostAnalysis(id),
-    enabled: !!id,
+    enabled: useAuthEnabledWith(!!id),
     staleTime: 1000 * 60 * 2,
   });
 }

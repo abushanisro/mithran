@@ -7,19 +7,25 @@ import {
   Body,
   Param,
   Query,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { BOMsService } from './boms.service';
+import { BomItemCostService } from '../bom-items/services/bom-item-cost.service';
 import { CreateBOMDto, UpdateBOMDto, QueryBOMsDto } from './dto/boms.dto';
 import { BOMResponseDto, BOMListResponseDto } from './dto/bom-response.dto';
-import { CurrentUser } from '../../common/decorators/user.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AccessToken } from '../../common/decorators/access-token.decorator';
 
 @ApiTags('BOMs')
 @ApiBearerAuth()
 @Controller({ path: 'bom', version: '1' })
 export class BOMsController {
-  constructor(private readonly bomsService: BOMsService) {}
+  constructor(
+    private readonly bomsService: BOMsService,
+    private readonly bomItemCostService: BomItemCostService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Get all BOMs' })
@@ -55,5 +61,29 @@ export class BOMsController {
   @ApiResponse({ status: 200, description: 'BOM deleted successfully' })
   async remove(@Param('id') id: string, @CurrentUser() user: any, @AccessToken() token: string) {
     return this.bomsService.remove(id, user.id, token);
+  }
+
+  // Cost-related endpoints
+  @Post(':id/recalculate-all-costs')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Recalculate all costs for a BOM (triggered on save)' })
+  @ApiResponse({ status: 200, description: 'All costs recalculated successfully' })
+  async recalculateAllCosts(@Param('id') id: string, @CurrentUser() user: any, @AccessToken() token: string): Promise<{ message: string }> {
+    await this.bomItemCostService.recalculateAllCosts(id, user.id, token);
+    return { message: 'All costs recalculated successfully' };
+  }
+
+  @Get(':id/cost-summary')
+  @ApiOperation({ summary: 'Get cost summary for all top-level assemblies in a BOM' })
+  @ApiResponse({ status: 200, description: 'Cost summary retrieved successfully' })
+  async getCostSummary(@Param('id') id: string, @CurrentUser() user: any, @AccessToken() token: string): Promise<any> {
+    return this.bomItemCostService.getBomCostSummary(id, user.id, token);
+  }
+
+  @Get(':id/cost-report')
+  @ApiOperation({ summary: 'Get comprehensive cost report for a BOM' })
+  @ApiResponse({ status: 200, description: 'Cost report generated successfully' })
+  async getCostReport(@Param('id') id: string, @CurrentUser() user: any, @AccessToken() token: string): Promise<any> {
+    return this.bomItemCostService.getBomCostReport(id, user.id, token);
   }
 }

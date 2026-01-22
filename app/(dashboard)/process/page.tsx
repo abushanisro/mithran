@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { X, Edit2, Trash2, Plus, Save, XCircle, Loader2, Settings, Search, Database, ChevronRight } from 'lucide-react';
+import { X, Edit2, Trash2, Plus, Save, XCircle, Loader2, Settings, Search, Database } from 'lucide-react';
 import {
   useProcesses,
   useReferenceTables,
@@ -89,9 +89,11 @@ export default function ProcessPage() {
   const [filterProcessRoute, setFilterProcessRoute] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // State for selected process group in manufacturing processes section
-  const [selectedManufacturingGroup, setSelectedManufacturingGroup] = useState<string | null>(null);
-  const [selectedManufacturingProcessId, setSelectedManufacturingProcessId] = useState<string | null>(null);
+
+  // State for lookup table modal
+  const [isLookupTableModalOpen, setIsLookupTableModalOpen] = useState(false);
+  const [modalProcessId, setModalProcessId] = useState<string | null>(null);
+  const [modalProcessName, setModalProcessName] = useState<string>('');
 
   // Reset process route filter when process group changes
   const handleProcessGroupChange = (value: string) => {
@@ -101,29 +103,17 @@ export default function ProcessPage() {
     }
   };
 
-  // Map process names to process groups
-  const processToGroupMapping: Record<string, string> = {
-    'Injection Molding': 'Plastic & Rubber',
-    'CNC Machining': 'Machining',
-    'Sheet Metal Bending': 'Sheet Metal',
-    'Laser Cutting': 'Sheet Metal',
-    'Welding': 'Assembly',
-    'Die Casting': 'Machining',
-    'Powder Coating': 'Post Processing',
-    'Assembly': 'Assembly',
-    'Quality Inspection': 'Post Processing',
-    'Heat Treatment': 'Post Processing',
-  };
 
   // Fetch processes from database
-  const { data: processesData, isLoading: loadingProcesses } = useProcesses();
+  const { data: processesData } = useProcesses();
 
   // Fetch reference tables for selected process (from old functionality)
   const { data: referenceTables, isLoading: loadingTables } = useReferenceTables(selectedProcessId || undefined);
 
-  // Fetch reference tables for selected manufacturing process
-  const { data: manufacturingReferenceTables, isLoading: loadingManufacturingTables } = useReferenceTables(
-    selectedManufacturingProcessId || undefined
+
+  // Fetch reference tables for modal process (only if modalProcessId is a valid UUID)
+  const { data: modalReferenceTables, isLoading: loadingModalTables } = useReferenceTables(
+    modalProcessId && modalProcessId !== 'test' ? modalProcessId : undefined
   );
 
   // Fetch calculator mappings with filters
@@ -135,34 +125,6 @@ export default function ProcessPage() {
   });
   const { data: hierarchy } = useProcessHierarchy();
 
-  // Handle manufacturing process card click
-  const handleManufacturingProcessClick = (processName: string, processId: string) => {
-    const groupName = processToGroupMapping[processName];
-    if (groupName) {
-      if (selectedManufacturingGroup === groupName && selectedManufacturingProcessId === processId) {
-        setSelectedManufacturingGroup(null);
-        setSelectedManufacturingProcessId(null);
-      } else {
-        setSelectedManufacturingGroup(groupName);
-        setSelectedManufacturingProcessId(processId);
-      }
-    }
-  };
-
-  // Get mappings for selected manufacturing group
-  const selectedGroupMappings = calculatorMappings?.mappings.filter(
-    (m) => m.processGroup === selectedManufacturingGroup
-  ) || [];
-
-  // Group mappings by process route
-  const groupedMappings = selectedGroupMappings.reduce((acc, mapping) => {
-    const route = mapping.processRoute;
-    if (!acc[route]) {
-      acc[route] = [];
-    }
-    acc[route].push(mapping);
-    return acc;
-  }, {} as Record<string, typeof selectedGroupMappings>);
 
   // Bulk update mutation
   const bulkUpdateMutation = useBulkUpdateTableRows();
@@ -668,36 +630,60 @@ export default function ProcessPage() {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        calculatorMappings?.mappings.map((mapping) => (
-                          <TableRow key={mapping.id}>
-                            <TableCell className="font-medium">{mapping.processGroup}</TableCell>
-                            <TableCell>{mapping.processRoute}</TableCell>
-                            <TableCell>{mapping.operation}</TableCell>
-                            <TableCell>
-                              <Badge variant="secondary">{mapping.calculatorName || 'NA'}</Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex gap-2 justify-end">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleEditMapping(mapping)}
-                                  className="h-8 w-8"
-                                >
-                                  <Edit2 className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleDeleteMapping(mapping.id)}
-                                  className="h-8 w-8 text-destructive hover:text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))
+                        calculatorMappings?.mappings.map((mapping) => {
+                          const handleProcessRouteClick = () => {
+                            // Find the process by name (processRoute)
+                            const process = processesData?.processes.find(
+                              p => p.processName === mapping.processRoute
+                            );
+                            
+                            if (process) {
+                              setModalProcessId(process.id);
+                              setModalProcessName(process.processName);
+                              setIsLookupTableModalOpen(true);
+                            } else {
+                              // Process not found - show user-friendly message
+                              toast.error(`Process "${mapping.processRoute}" not found. Please update the calculator mapping to use one of: ${processesData?.processes.map(p => p.processName).join(', ')}`);
+                            }
+                          };
+
+                          return (
+                            <TableRow key={mapping.id}>
+                              <TableCell className="font-medium">{mapping.processGroup}</TableCell>
+                              <TableCell 
+                                className="cursor-pointer hover:bg-muted/50 transition-colors font-medium text-primary hover:text-primary/80"
+                                onClick={handleProcessRouteClick}
+                                title="Click to view reference tables"
+                              >
+                                {mapping.processRoute}
+                              </TableCell>
+                              <TableCell>{mapping.operation}</TableCell>
+                              <TableCell>
+                                <Badge variant="secondary">{mapping.calculatorName || 'NA'}</Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex gap-2 justify-end">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleEditMapping(mapping)}
+                                    className="h-8 w-8"
+                                  >
+                                    <Edit2 className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleDeleteMapping(mapping.id)}
+                                    className="h-8 w-8 text-destructive hover:text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
                       )}
                     </TableBody>
                   </Table>
@@ -707,193 +693,6 @@ export default function ProcessPage() {
           </CardContent>
         </Card>
 
-        {/* MANUFACTURING PROCESSES */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Manufacturing Processes</CardTitle>
-            <CardDescription>Click on a process to view calculator mappings</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loadingProcesses ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <span className="ml-2 text-muted-foreground">Loading processes...</span>
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {processesData?.processes.map((process) => {
-                    const groupName = processToGroupMapping[process.processName];
-                    const isSelected = selectedManufacturingProcessId === process.id;
-
-                    return (
-                      <Card
-                        key={process.id}
-                        className={`border-l-4 cursor-pointer transition-all hover:shadow-md ${isSelected
-                          ? 'border-l-primary bg-primary/5 shadow-md'
-                          : 'border-l-primary/30'
-                          }`}
-                        onClick={() => handleManufacturingProcessClick(process.processName, process.id)}
-                      >
-                        <CardContent className="pt-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-semibold">{process.processName}</p>
-                              <Badge variant="secondary" className="mt-1 text-xs">
-                                {process.processCategory}
-                              </Badge>
-                            </div>
-                            {groupName && (
-                              <Badge variant="outline" className="text-[10px]">
-                                {groupName}
-                              </Badge>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-
-                {/* Calculator Mappings and Reference Tables for Selected Process */}
-                {selectedManufacturingGroup && (
-                  <div className="mt-6 border-t pt-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <h4 className="text-lg font-semibold">
-                          {processesData?.processes.find(p => p.id === selectedManufacturingProcessId)?.processName || selectedManufacturingGroup}
-                        </h4>
-                        <p className="text-sm text-muted-foreground">
-                          Calculator mappings and reference tables
-                        </p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedManufacturingGroup(null);
-                          setSelectedManufacturingProcessId(null);
-                        }}
-                      >
-                        <X className="h-4 w-4 mr-2" />
-                        Close
-                      </Button>
-                    </div>
-
-                    {/* Calculator Mappings Section - Grouped by Process Route */}
-                    {selectedGroupMappings.length > 0 && (
-                      <div className="mb-6">
-                        <h5 className="text-md font-semibold mb-3 flex items-center gap-2">
-                          <Settings className="h-4 w-4" />
-                          {selectedManufacturingGroup} - Calculator Mappings
-                          <Badge variant="outline" className="ml-auto">
-                            {Object.keys(groupedMappings).length} routes
-                          </Badge>
-                        </h5>
-
-                        <div className="space-y-3">
-                          {Object.entries(groupedMappings).map(([processRoute, mappings]) => (
-                            <Card key={processRoute} className="border-l-4 border-l-primary/30">
-                              <CardContent className="p-4">
-                                <div className="space-y-3">
-                                  {/* Process Route Header */}
-                                  <div className="flex items-center gap-3">
-                                    <div className="flex-1">
-                                      <h6 className="font-semibold text-sm flex items-center gap-2">
-                                        <ChevronRight className="h-4 w-4 text-primary" />
-                                        {processRoute}
-                                      </h6>
-                                      <p className="text-xs text-muted-foreground mt-1">
-                                        {mappings.length} operation{mappings.length !== 1 ? 's' : ''}
-                                      </p>
-                                    </div>
-                                  </div>
-
-                                  {/* Operations List */}
-                                  <div className="space-y-2 pl-6">
-                                    {mappings.map((mapping) => (
-                                      <div
-                                        key={mapping.id}
-                                        className="flex items-center gap-3 p-2 rounded-md bg-muted/30 hover:bg-muted/50 transition-colors"
-                                      >
-                                        <div className="flex-1 grid grid-cols-2 gap-3">
-                                          <div>
-                                            <p className="text-xs text-muted-foreground">Operation</p>
-                                            <p className="text-sm font-medium">{mapping.operation}</p>
-                                          </div>
-                                          <div>
-                                            <p className="text-xs text-muted-foreground">Calculator</p>
-                                            <Badge variant="secondary" className="text-xs">
-                                              {mapping.calculatorName || 'NA'}
-                                            </Badge>
-                                          </div>
-                                        </div>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleEditMapping(mapping);
-                                          }}
-                                          className="h-7 w-7 shrink-0"
-                                        >
-                                          <Edit2 className="h-3.5 w-3.5" />
-                                        </Button>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Reference Tables Section */}
-                    <div className="mt-6">
-                      <h5 className="text-md font-semibold mb-3 flex items-center gap-2">
-                        <Database className="h-4 w-4" />
-                        Reference Tables & Lookup Data
-                      </h5>
-                      {loadingManufacturingTables ? (
-                        <div className="flex items-center justify-center py-8 border rounded-lg">
-                          <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                          <span className="ml-2 text-muted-foreground">Loading reference tables...</span>
-                        </div>
-                      ) : manufacturingReferenceTables && manufacturingReferenceTables.length > 0 ? (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                          {manufacturingReferenceTables.map((table) => renderEditableTable(table))}
-                        </div>
-                      ) : (
-                        <div className="border rounded-lg p-8 bg-muted/20">
-                          <div className="text-center">
-                            <Database className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
-                            <h6 className="font-semibold mb-2">No Reference Tables Available</h6>
-                            <p className="text-sm text-muted-foreground mb-4">
-                              This process doesn't have any lookup tables configured yet.
-                            </p>
-                            <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg p-4 text-left max-w-md mx-auto">
-                              <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
-                                💡 Available for:
-                              </p>
-                              <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
-                                <li>Injection Molding (5 tables)</li>
-                              </ul>
-                              <p className="text-xs text-blue-700 dark:text-blue-300 mt-3">
-                                More reference tables can be added via database migrations.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </CardContent>
-        </Card>
 
         {/* PROCESS-SPECIFIC TABLES */}
         {renderProcessTables()}
@@ -973,6 +772,154 @@ export default function ProcessPage() {
               )}
               {editingMapping ? 'Update' : 'Create'}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* LOOKUP TABLE MODAL - ENHANCED FOR CALCULATOR REFERENCE */}
+      <Dialog open={isLookupTableModalOpen} onOpenChange={setIsLookupTableModalOpen}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-hidden flex flex-col">
+          <DialogHeader className="pb-4 border-b">
+            <DialogTitle className="flex items-center gap-3 text-xl">
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
+                <Database className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <span className="text-xl font-bold">{modalProcessName}</span>
+                <span className="text-lg font-normal text-muted-foreground ml-2">Reference Tables</span>
+              </div>
+            </DialogTitle>
+            <DialogDescription className="text-base mt-2">
+              Lookup tables and reference data for calculator creation and process planning
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-hidden flex flex-col">
+            {loadingModalTables ? (
+              <div className="flex items-center justify-center py-16">
+                <div className="text-center">
+                  <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Loading Reference Data</h3>
+                  <p className="text-muted-foreground">Fetching lookup tables for {modalProcessName}...</p>
+                </div>
+              </div>
+            ) : modalReferenceTables && modalReferenceTables.length > 0 ? (
+              <div className="flex-1 overflow-auto">
+                <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                    <h4 className="font-semibold text-blue-900 dark:text-blue-100">Calculator Reference Guide</h4>
+                  </div>
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    Use these lookup tables as reference data when creating calculators for {modalProcessName}. 
+                    You can copy values, formulas, and ranges to build accurate calculation logic.
+                  </p>
+                </div>
+                
+                <div className="grid grid-cols-1 2xl:grid-cols-2 gap-6 pb-4">
+                  {modalReferenceTables.map((table, index) => (
+                    <div key={table.id} className="border rounded-lg overflow-hidden bg-card">
+                      <div className="bg-muted/30 px-4 py-3 border-b">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="font-semibold text-lg">{table.tableName}</h3>
+                            {table.tableDescription && (
+                              <p className="text-sm text-muted-foreground mt-1">{table.tableDescription}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              Table {index + 1}
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                // Copy table data to clipboard for calculator use
+                                const tableData = table.rows?.map(row => {
+                                  const data = (row as any).row_data || row.rowData || row;
+                                  return data;
+                                }) || [];
+                                navigator.clipboard.writeText(JSON.stringify(tableData, null, 2));
+                                toast?.success?.('Table data copied to clipboard');
+                              }}
+                            >
+                              Copy Data
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="p-4">
+                        {renderEditableTable(table)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center max-w-md">
+                  <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-muted/50 flex items-center justify-center">
+                    <Database className="h-10 w-10 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-3">No Reference Tables Found</h3>
+                  <p className="text-muted-foreground mb-6 leading-relaxed">
+                    No lookup tables have been configured for <span className="font-semibold">{modalProcessName}</span> yet. 
+                    Reference tables help provide standardized data for calculator creation.
+                  </p>
+                  
+                  <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded-lg p-6 text-left">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                      <h4 className="font-semibold text-amber-900 dark:text-amber-100">What are Reference Tables?</h4>
+                    </div>
+                    <ul className="text-sm text-amber-800 dark:text-amber-200 space-y-2">
+                      <li>• <strong>Material Properties:</strong> Density, strength, melting points</li>
+                      <li>• <strong>Process Parameters:</strong> Speeds, feeds, temperatures</li>
+                      <li>• <strong>Dimensional Standards:</strong> Tolerances, clearances</li>
+                      <li>• <strong>Cost Factors:</strong> Tool life, cycle times, setup costs</li>
+                    </ul>
+                    <p className="text-xs text-amber-700 dark:text-amber-300 mt-4 italic">
+                      These tables can be added via the database and will appear here for calculator reference.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter className="border-t pt-4 flex justify-between">
+            <div className="text-sm text-muted-foreground">
+              {modalReferenceTables?.length ? (
+                <span>Showing {modalReferenceTables.length} reference table{modalReferenceTables.length !== 1 ? 's' : ''}</span>
+              ) : null}
+            </div>
+            <div className="flex gap-2">
+              {modalReferenceTables?.length ? (
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    // Generate calculator template based on reference tables
+                    const template = {
+                      processName: modalProcessName,
+                      referenceTables: modalReferenceTables.map(table => ({
+                        name: table.tableName,
+                        description: table.tableDescription,
+                        columns: table.columnDefinitions
+                      }))
+                    };
+                    navigator.clipboard.writeText(JSON.stringify(template, null, 2));
+                    toast?.success?.('Calculator template copied to clipboard');
+                  }}
+                >
+                  Export for Calculator
+                </Button>
+              ) : null}
+              <Button onClick={() => setIsLookupTableModalOpen(false)}>
+                Close
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -18,7 +18,8 @@ export class SupabaseHealthIndicator extends HealthIndicator {
   async isHealthy(key: string): Promise<HealthIndicatorResult> {
     try {
       const client = this.supabaseService.getAdminClient();
-      const { error } = await client.from('mhr').select('count').limit(1);
+      // Check using projects table which always exists
+      const { error } = await client.from('projects').select('count').limit(1);
 
       if (error) {
         throw new Error(`Supabase connection failed: ${error.message}`);
@@ -42,7 +43,8 @@ export class SupabaseHealthIndicator extends HealthIndicator {
       const client = this.supabaseService.getAdminClient();
 
       // Check if key tables exist by querying them
-      const tables = ['mhr', 'lsr', 'raw_materials', 'processes'];
+      // Using core tables that always exist in the system
+      const tables = ['projects', 'boms', 'bom_items', 'vendors'];
       const results: Record<string, boolean> = {};
 
       for (const table of tables) {

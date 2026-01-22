@@ -1,7 +1,7 @@
 'use client';
 
+// Updated: Removed all icons, compact design - Version 2.0
 import { useMemo } from 'react';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -11,7 +11,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Filter } from 'lucide-react';
 
 interface BOMItem {
   id: string;
@@ -40,7 +39,6 @@ interface BOMSelectionCardProps {
   onSearchChange: (search: string) => void;
   onStatusFilterChange: (status: string) => void;
   onTypeFilterChange: (type: string) => void;
-  onCreateRoute: () => void;
 }
 
 export function BOMSelectionCard({
@@ -54,8 +52,7 @@ export function BOMSelectionCard({
   onPartChange,
   onSearchChange,
   onStatusFilterChange,
-  onTypeFilterChange,
-  onCreateRoute,
+  onTypeFilterChange
 }: BOMSelectionCardProps) {
   const selectedBom = boms.find(b => b.id === selectedBomId);
 
@@ -77,111 +74,147 @@ export function BOMSelectionCard({
 
   const totalItems = selectedBom?.items.length || 0;
   const completedItems = selectedBom?.items.filter(i => i.status === 'completed').length || 0;
-  const pendingItems = totalItems - completedItems;
-
   return (
-    <div className="card border-l-4 border-l-primary shadow-md mb-4 rounded-lg overflow-hidden">
-      <div className="bg-primary py-3 px-4 flex items-center justify-between">
-        <div>
-          <h6 className="m-0 font-semibold text-primary-foreground">BOM Selection & Filters</h6>
-          <p className="text-xs text-primary-foreground/80 mt-0.5">Select BOM and filter parts to create process planning</p>
+    <div className="card border rounded-lg overflow-hidden bg-card">
+      {/* Compact Header */}
+      <div className="bg-primary py-2 px-3">
+        <div className="flex items-center justify-between">
+          <h6 className="m-0 font-semibold text-primary-foreground text-sm">BOM & Part Selection</h6>
+          {selectedBomId && (
+            <Badge variant="secondary" className="text-xs">
+              {filteredItems.length}/{totalItems} parts
+            </Badge>
+          )}
         </div>
       </div>
-      <div className="bg-card p-4">
-        {/* BOM Selection */}
-        <div className="space-y-2 mb-4">
-          <label className="text-xs font-semibold">Select BOM</label>
-          <Select value={selectedBomId} onValueChange={onBomChange}>
-            <SelectTrigger className="h-9">
-              <SelectValue placeholder="Select BOM" />
-            </SelectTrigger>
-            <SelectContent>
-              {boms.map((bom) => (
-                <SelectItem key={bom.id} value={bom.id}>
-                  {bom.name} (v{bom.version})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+
+      <div className="bg-card p-3 space-y-3">
+        {/* Main Selection Row - BOM + Quick Stats */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
+          {/* BOM Selection */}
+          <div className="lg:col-span-2">
+            <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">
+              Select BOM
+            </label>
+            <Select value={selectedBomId} onValueChange={onBomChange}>
+              <SelectTrigger className="h-9 bg-background border-2">
+                <SelectValue placeholder="Choose a BOM to begin..." />
+              </SelectTrigger>
+              <SelectContent>
+                {boms.map((bom) => (
+                  <SelectItem key={bom.id} value={bom.id}>
+                    {bom.name} <span className="text-xs text-muted-foreground">(v{bom.version})</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Quick Stats - Only show when BOM selected */}
+          {selectedBomId && (
+            <>
+              <div className="bg-blue-50 dark:bg-blue-950/50 rounded-lg p-2 border border-blue-200 dark:border-blue-800">
+                <p className="text-[10px] font-medium text-blue-700 dark:text-blue-300">Total Items</p>
+                <p className="text-sm font-bold text-blue-900 dark:text-blue-100">{totalItems}</p>
+              </div>
+              <div className="bg-green-50 dark:bg-green-950/50 rounded-lg p-2 border border-green-200 dark:border-green-800">
+                <p className="text-[10px] font-medium text-green-700 dark:text-green-300">Completed</p>
+                <p className="text-sm font-bold text-green-900 dark:text-green-100">{completedItems}</p>
+              </div>
+            </>
+          )}
         </div>
 
+        {/* Filters and Part Selection - Only show when BOM is selected */}
         {selectedBomId && (
           <>
-            {/* Filters Row */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4 p-3 bg-secondary/30 rounded-lg border border-border">
-              <div className="md:col-span-2 space-y-2">
-                <label className="text-xs font-semibold flex items-center gap-1">
-                  <Search className="h-3 w-3" />
-                  Search Parts
-                </label>
-                <Input
-                  placeholder="Search by part number or description..."
-                  value={searchTerm}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                  className="h-9 text-xs"
-                />
-              </div>
+            {/* Filter Bar */}
+            <div className="bg-muted/50 rounded-lg p-2 border">
+              <div className="grid grid-cols-1 md:grid-cols-6 gap-2">
+                {/* Search */}
+                <div className="md:col-span-3">
+                  <Input
+                    placeholder="Search parts by number or description..."
+                    value={searchTerm}
+                    onChange={(e) => onSearchChange(e.target.value)}
+                    className="h-8 bg-background text-xs"
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <label className="text-xs font-semibold flex items-center gap-1">
-                  <Filter className="h-3 w-3" />
-                  Status
-                </label>
-                <Select value={statusFilter} onValueChange={onStatusFilterChange}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                {/* Status Filter */}
+                <div className="md:col-span-1.5">
+                  <Select value={statusFilter} onValueChange={onStatusFilterChange}>
+                    <SelectTrigger className="h-8 bg-background text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="in_progress">In Progress</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div className="space-y-2">
-                <label className="text-xs font-semibold flex items-center gap-1">
-                  <Filter className="h-3 w-3" />
-                  Type
-                </label>
-                <Select value={typeFilter} onValueChange={onTypeFilterChange}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="assembly">Assembly</SelectItem>
-                    <SelectItem value="sub_assembly">Sub-Assembly</SelectItem>
-                    <SelectItem value="child_part">Child Part</SelectItem>
-                  </SelectContent>
-                </Select>
+                {/* Type Filter */}
+                <div className="md:col-span-1.5">
+                  <Select value={typeFilter} onValueChange={onTypeFilterChange}>
+                    <SelectTrigger className="h-8 bg-background text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="assembly">
+                        <Badge variant="default" className="text-[9px]">Assembly</Badge>
+                      </SelectItem>
+                      <SelectItem value="sub_assembly">
+                        <Badge variant="secondary" className="text-[9px]">Sub-Assembly</Badge>
+                      </SelectItem>
+                      <SelectItem value="child_part">
+                        <Badge variant="outline" className="text-[9px]">Child Part</Badge>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
 
-            {/* Part Selection Dropdown */}
-            <div className="space-y-2 mb-4">
-              <label className="text-xs font-semibold">
-                Select Part ({filteredItems.length} of {totalItems} items)
+            {/* Part Selection */}
+            <div className="bg-accent/20 rounded-lg p-2 border border-primary/20">
+              <label className="text-xs font-semibold text-foreground mb-2 flex items-center justify-between">
+                <span>Select Part to Create Process Plan</span>
+                <Badge variant="outline" className="text-[9px]">
+                  {filteredItems.length} results
+                </Badge>
               </label>
               <Select
                 value={selectedPartNumber}
                 onValueChange={onPartChange}
               >
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Select part from filtered results" />
+                <SelectTrigger className="h-8 bg-background border-2 text-xs">
+                  <SelectValue placeholder="Choose a part from filtered results..." />
                 </SelectTrigger>
                 <SelectContent>
                   {filteredItems.length === 0 ? (
-                    <div className="p-2 text-xs text-muted-foreground">No parts match the filters</div>
+                    <div className="p-3 text-center">
+                      <p className="text-xs text-muted-foreground">No parts match your filters</p>
+                    </div>
                   ) : (
                     filteredItems.map((item) => (
                       <SelectItem key={item.id} value={item.partNumber}>
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-[9px] px-1 py-0">
+                          <Badge
+                            variant={
+                              item.itemType === 'assembly' ? 'default' :
+                                item.itemType === 'sub_assembly' ? 'secondary' :
+                                  'outline'
+                            }
+                            className="text-[8px] px-1 py-0"
+                          >
                             {item.itemType === 'assembly' ? 'ASM' : item.itemType === 'sub_assembly' ? 'SUB' : 'PRT'}
                           </Badge>
-                          <span>{item.partNumber} - {item.description}</span>
+                          <span className="font-medium text-xs">{item.partNumber}</span>
+                          <span className="text-muted-foreground text-xs">- {item.description}</span>
                         </div>
                       </SelectItem>
                     ))
@@ -189,51 +222,17 @@ export function BOMSelectionCard({
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Progress Summary */}
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              <div className="bg-secondary/30 rounded-lg p-3 border border-border">
-                <p className="text-xs text-muted-foreground mb-1">Total Items</p>
-                <p className="text-xl font-bold">{totalItems}</p>
-              </div>
-              <div className="bg-green-500/10 rounded-lg p-3 border border-green-500/20">
-                <p className="text-xs text-muted-foreground mb-1">Routes Defined</p>
-                <p className="text-xl font-bold text-green-600">{completedItems}</p>
-              </div>
-              <div className="bg-orange-500/10 rounded-lg p-3 border border-orange-500/20">
-                <p className="text-xs text-muted-foreground mb-1">Pending</p>
-                <p className="text-xl font-bold text-orange-600">{pendingItems}</p>
-              </div>
-            </div>
-
-            {/* Workflow Info */}
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 mb-4">
-              <p className="text-xs text-foreground">
-                <span className="font-semibold">Workflow:</span> Use filters above to find parts, then select to create process planning. Each part can have raw materials, process steps, and logistics defined separately.
-              </p>
-            </div>
-
-            {/* Selected Part Info */}
-            {selectedPartNumber && (
-              <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg border border-border">
-                <div>
-                  <p className="text-xs font-semibold text-muted-foreground mb-1">Selected Part</p>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="default">
-                      {selectedPartNumber}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">
-                      {selectedBom?.items.find(i => i.partNumber === selectedPartNumber)?.description}
-                    </span>
-                  </div>
-                </div>
-                <Button onClick={onCreateRoute} size="sm">
-                  <Plus className="h-3 w-3 mr-1" />
-                  Create Route
-                </Button>
-              </div>
-            )}
           </>
+        )}
+
+        {/* Empty State */}
+        {!selectedBomId && (
+          <div className="text-center py-6 px-4">
+            <p className="text-sm font-medium text-muted-foreground mb-1">No BOM Selected</p>
+            <p className="text-xs text-muted-foreground">
+              Select a BOM from the dropdown above to start process planning
+            </p>
+          </div>
         )}
       </div>
     </div>

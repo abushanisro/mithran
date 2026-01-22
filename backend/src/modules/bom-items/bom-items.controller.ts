@@ -18,7 +18,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes } from '
 import { BOMItemsService } from './bom-items.service';
 import { CreateBOMItemDto, UpdateBOMItemDto, QueryBOMItemsDto } from './dto/bom-items.dto';
 import { BOMItemResponseDto, BOMItemListResponseDto } from './dto/bom-item-response.dto';
-import { CurrentUser } from '../../common/decorators/user.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AccessToken } from '../../common/decorators/access-token.decorator';
 import { FileStorageService } from './services/file-storage.service';
 import { StepConverterService } from './services/step-converter.service';

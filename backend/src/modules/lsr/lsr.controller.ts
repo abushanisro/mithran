@@ -13,7 +13,7 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { LSRService } from './lsr.service';
 import { CreateLSRDto, UpdateLSRDto } from './lsr.dto';
-import { CurrentUser } from '../../common/decorators/user.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AccessToken } from '../../common/decorators/access-token.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 
@@ -21,7 +21,7 @@ import { Public } from '../../common/decorators/public.decorator';
 @ApiBearerAuth()
 @Controller({ path: 'lsr', version: '1' })
 export class LSRController {
-  constructor(private readonly lsrService: LSRService) {}
+  constructor(private readonly lsrService: LSRService) { }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -37,23 +37,16 @@ export class LSRController {
   }
 
   @Get()
-  @Public()
   @ApiOperation({ summary: 'Get all LSR records with optional search' })
   @ApiResponse({ status: 200, description: 'LSR records retrieved successfully' })
   async findAll(
     @Query('search') search: string,
-    @CurrentUser() user?: any,
-    @AccessToken() token?: string,
+    @CurrentUser() user: any,
+    @AccessToken() token: string,
   ) {
-    return this.lsrService.findAll(search, user?.id, token);
+    return this.lsrService.findAll(search, user.id, token);
   }
 
-  @Get('statistics')
-  @ApiOperation({ summary: 'Get LSR statistics' })
-  @ApiResponse({ status: 200, description: 'Statistics retrieved successfully' })
-  async getStatistics(@CurrentUser() user: any, @AccessToken() token: string) {
-    return this.lsrService.getStatistics(user.id, token);
-  }
 
   @Get('code/:labourCode')
   @ApiOperation({ summary: 'Get LSR record by labour code' })

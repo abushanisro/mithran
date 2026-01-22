@@ -47,12 +47,7 @@ export default function ProcessPlanningPage() {
     setStatusFilter('all');
     setTypeFilter('all');
   };
-
-  const handleCreateRoute = () => {
-    console.log('Creating route for:', selectedPartNumber);
-    // TODO: Implement route creation via API
-  };
-
+  
   // Transform BOMs data into the format expected by BOMSelectionCard
   const boms = useMemo<LocalBOM[]>(() => {
     if (!bomsData?.boms) return [];
@@ -134,7 +129,6 @@ export default function ProcessPlanningPage() {
           onSearchChange={setSearchTerm}
           onStatusFilterChange={setStatusFilter}
           onTypeFilterChange={setTypeFilter}
-          onCreateRoute={handleCreateRoute}
         />
 
         {/* PROCESS PLANNING SECTIONS - Only show if part is selected */}
@@ -189,15 +183,15 @@ export default function ProcessPlanningPage() {
             <ManufacturingProcessSection />
 
             {/* Packaging & Logistics Section */}
-            <PackagingLogisticsSection />
+            <PackagingLogisticsSection bomItemId={selectedPart.id} />
 
             {/* Child Parts Section - Only show for assembly and sub_assembly */}
             {selectedPart && selectedPart.itemType !== 'child_part' && (
-              <ChildPartsSection />
+              <ChildPartsSection bomItemId={selectedPart.id} bomId={selectedBomId} />
             )}
 
             {/* Procured Parts Section */}
-            <ProcuredPartsSection />
+            <ProcuredPartsSection bomItemId={selectedPart.id} />
 
             {/* Parent Estimates Section */}
             <ParentEstimatesSection />

@@ -2,100 +2,146 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Loader2 } from 'lucide-react';
 import { ProcessCostDialog } from './ProcessCostDialog';
+import {
+  useProcessCosts,
+  useCreateProcessCost,
+  useUpdateProcessCost,
+  useDeleteProcessCost,
+} from '@/lib/api/hooks/useProcessCosts';
 
-interface ProcessCost {
-  id: string;
-  opNbr: number;
-  description: string;
-  location?: string;
-  group: string;
-  processRoute: string;
-  operation: string;
-  processCalculatorId?: string;
-  mhrId: string;
-  lsrId: string;
-  machineName: string;
-  labourType: string;
-  operationName: string;
-  processRouteName: string;
-  machineRate: number;
-  labourRate: number;
-  setupManning: number;
-  setupTime: number;
-  batchSize: number;
-  heads: number;
-  cycleTime: number;
-  partsPerCycle: number;
-  scrap: number;
-  machineValue: number;
-  totalCost: number;
+interface ManufacturingProcessSectionProps {
+  bomItemId?: string;
 }
 
-export function ManufacturingProcessSection() {
-  const [processes, setProcesses] = useState<ProcessCost[]>([]);
+export function ManufacturingProcessSection({ bomItemId }: ManufacturingProcessSectionProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editProcess, setEditProcess] = useState<ProcessCost | null>(null);
+  const [editProcess, setEditProcess] = useState<any | null>(null);
+
+  // Fetch process costs from database
+  const { data, isLoading, error } = useProcessCosts({
+    bomItemId,
+    isActive: true,
+    enabled: !!bomItemId,
+  });
+
+  // Mutations
+  const createMutation = useCreateProcessCost();
+  const updateMutation = useUpdateProcessCost();
+  const deleteMutation = useDeleteProcessCost();
+
+  const processes = data?.records || [];
 
   const handleAddProcess = () => {
     setEditProcess(null);
     setDialogOpen(true);
   };
 
-  const handleEditProcess = (process: ProcessCost) => {
+  const handleEditProcess = (process: any) => {
     setEditProcess(process);
     setDialogOpen(true);
   };
 
-  const handleDialogSubmit = (data: any) => {
-    const processData: ProcessCost = {
-      id: data.id || Date.now().toString(),
-      opNbr: data.opNbr,
-      description: data.description,
-      location: data.location,
-      group: data.group,
-      processRoute: data.processRoute,
-      operation: data.operation,
-      processCalculatorId: data.processCalculatorId,
-      mhrId: data.mhrId,
-      lsrId: data.lsrId,
-      machineName: data.machineName,
-      labourType: data.labourType,
-      operationName: data.operationName,
-      processRouteName: data.processRouteName,
-      machineRate: data.machineRate,
-      labourRate: data.labourRate,
-      setupManning: data.setupManning,
-      setupTime: data.setupTime,
-      batchSize: data.batchSize,
-      heads: data.heads,
-      cycleTime: data.cycleTime,
-      partsPerCycle: data.partsPerCycle,
-      scrap: data.scrap,
-      machineValue: data.machineValue,
-      totalCost: data.totalCost,
-    };
-
-    if (data.id) {
-      // Update existing process
-      setProcesses(processes.map(p => p.id === data.id ? processData : p));
-    } else {
-      // Add new process
-      setProcesses([...processes, processData]);
+  const handleDialogSubmit = async (data: any) => {
+    if (!bomItemId) {
+      alert('Please select a BOM item first');
+      return;
     }
 
-    setDialogOpen(false);
-    setEditProcess(null);
+    try {
+      if (editProcess?.id) {
+        // Update existing process
+        await updateMutation.mutateAsync({
+          id: editProcess.id,
+          data: {
+            opNbr: data.opNbr,
+            processGroup: data.group,
+            processRoute: data.processRoute,
+            operation: data.operation,
+            directRate: data.directRate || 0,
+            indirectRate: data.indirectRate || 0,
+            fringeRate: data.fringeRate || 0,
+            machineRate: data.machineRate || 0,
+            machineValue: data.machineValue || 0,
+            laborRate: data.laborRate || 0,
+            shiftPatternHoursPerDay: data.shiftPatternHoursPerDay || 8,
+            setupManning: data.setupManning,
+            setupTime: data.setupTime,
+            batchSize: data.batchSize,
+            heads: data.heads,
+            cycleTime: data.cycleTime,
+            partsPerCycle: data.partsPerCycle,
+            scrap: data.scrap,
+            facilityId: data.facilityId,
+            facilityRateId: data.facilityRateId,
+            notes: data.notes,
+          },
+        });
+      } else {
+        // Create new process
+        await createMutation.mutateAsync({
+          bomItemId,
+          opNbr: data.opNbr,
+          processGroup: data.group,
+          processRoute: data.processRoute,
+          operation: data.operation,
+          directRate: data.directRate || 0,
+          indirectRate: data.indirectRate || 0,
+          fringeRate: data.fringeRate || 0,
+          machineRate: data.machineRate || 0,
+          machineValue: data.machineValue || 0,
+          laborRate: data.laborRate || 0,
+          shiftPatternHoursPerDay: data.shiftPatternHoursPerDay || 8,
+          setupManning: data.setupManning,
+          setupTime: data.setupTime,
+          batchSize: data.batchSize,
+          heads: data.heads,
+          cycleTime: data.cycleTime,
+          partsPerCycle: data.partsPerCycle,
+          scrap: data.scrap,
+          facilityId: data.facilityId,
+          facilityRateId: data.facilityRateId,
+          isActive: true,
+        });
+      }
+
+      setDialogOpen(false);
+      setEditProcess(null);
+    } catch (error) {
+      console.error('Error saving process:', error);
+    }
   };
 
-  const handleDeleteProcess = (id: string) => {
-    setProcesses(processes.filter(p => p.id !== id));
+  const handleDeleteProcess = async (id: string) => {
+    if (!bomItemId) return;
+
+    if (confirm('Are you sure you want to delete this process?')) {
+      try {
+        await deleteMutation.mutateAsync(id);
+      } catch (error) {
+        console.error('Error deleting process:', error);
+      }
+    }
   };
 
   const calculateTotal = () => {
-    return processes.reduce((sum, p) => sum + p.totalCost, 0).toFixed(2);
+    return processes.reduce((sum, p) => sum + (p.totalCostPerPart || 0), 0).toFixed(2);
   };
+
+  if (isLoading) {
+    return (
+      <div className="card border-l-4 border-l-primary shadow-md mb-4 mt-3 rounded-lg overflow-hidden">
+        <div className="bg-primary py-3 px-4">
+          <h6 className="m-0 font-semibold text-primary-foreground">Process Costs</h6>
+        </div>
+        <div className="bg-card p-8 text-center">
+          <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-primary" />
+          <p className="text-sm text-muted-foreground">Loading process costs...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="card border-l-4 border-l-primary shadow-md mb-4 mt-3 rounded-lg overflow-hidden">
@@ -107,26 +153,23 @@ export function ManufacturingProcessSection() {
           <table className="w-full border-collapse">
             <thead>
               <tr className="bg-primary text-primary-foreground">
-                <th className="p-3 text-left text-xs font-semibold border-r border-primary-foreground/20">Op#</th>
-                <th className="p-3 text-left text-xs font-semibold border-r border-primary-foreground/20">Description</th>
-                <th className="p-3 text-left text-xs font-semibold border-r border-primary-foreground/20">Group</th>
-                <th className="p-3 text-left text-xs font-semibold border-r border-primary-foreground/20">Process Route</th>
-                <th className="p-3 text-left text-xs font-semibold border-r border-primary-foreground/20">Operation</th>
-                <th className="p-3 text-left text-xs font-semibold border-r border-primary-foreground/20">Machine</th>
-                <th className="p-3 text-left text-xs font-semibold border-r border-primary-foreground/20">Labour</th>
-                <th className="p-3 text-left text-xs font-semibold border-r border-primary-foreground/20">Setup (min)</th>
-                <th className="p-3 text-left text-xs font-semibold border-r border-primary-foreground/20">Batch</th>
-                <th className="p-3 text-left text-xs font-semibold border-r border-primary-foreground/20">Cycle (s)</th>
-                <th className="p-3 text-left text-xs font-semibold border-r border-primary-foreground/20">Parts/Cycle</th>
-                <th className="p-3 text-left text-xs font-semibold border-r border-primary-foreground/20">Scrap %</th>
-                <th className="p-3 text-left text-xs font-semibold border-r border-primary-foreground/20">Total Cost (₹)</th>
-                <th className="p-3 text-center text-xs font-semibold">Actions</th>
+                <th className="p-3 text-left text-xs font-semibold border-r border-primary-foreground/20 w-16">Op#</th>
+                <th className="p-3 text-left text-xs font-semibold border-r border-primary-foreground/20">Process</th>
+                <th className="p-3 text-left text-xs font-semibold border-r border-primary-foreground/20 w-28">Machine Rate</th>
+                <th className="p-3 text-left text-xs font-semibold border-r border-primary-foreground/20 w-28">Labor Rate</th>
+                <th className="p-3 text-left text-xs font-semibold border-r border-primary-foreground/20 w-24">Setup (min)</th>
+                <th className="p-3 text-left text-xs font-semibold border-r border-primary-foreground/20 w-20">Batch</th>
+                <th className="p-3 text-left text-xs font-semibold border-r border-primary-foreground/20 w-24">Cycle (s)</th>
+                <th className="p-3 text-left text-xs font-semibold border-r border-primary-foreground/20 w-28">Parts/Cycle</th>
+                <th className="p-3 text-left text-xs font-semibold border-r border-primary-foreground/20 w-20">Scrap %</th>
+                <th className="p-3 text-left text-xs font-semibold border-r border-primary-foreground/20 w-32">Total Cost (₹)</th>
+                <th className="p-3 text-center text-xs font-semibold w-24">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {processes.length === 0 ? (
                 <tr>
-                  <td colSpan={14} className="p-8 text-center text-muted-foreground">
+                  <td colSpan={12} className="p-8 text-center text-muted-foreground">
                     <p className="text-sm">No manufacturing processes added yet</p>
                     <p className="text-xs mt-1">Click "Add Process" to get started</p>
                   </td>
@@ -135,26 +178,36 @@ export function ManufacturingProcessSection() {
                 <>
                   {processes.map((process) => (
                     <tr key={process.id} className="hover:bg-secondary/50">
-                      <td className="p-3 border-r border-border text-xs">{process.opNbr}</td>
-                      <td className="p-3 border-r border-border text-xs">{process.description}</td>
-                      <td className="p-3 border-r border-border text-xs">{process.group}</td>
-                      <td className="p-3 border-r border-border text-xs">{process.processRoute}</td>
-                      <td className="p-3 border-r border-border text-xs">{process.operation}</td>
+                      <td className="p-3 border-r border-border text-xs">{process.opNbr || 0}</td>
                       <td className="p-3 border-r border-border text-xs">
-                        <div className="font-medium">{process.machineName}</div>
-                        <div className="text-muted-foreground text-[10px]">₹{process.machineRate.toFixed(2)}/hr</div>
+                        <div className="space-y-0.5">
+                          {process.processGroup && (
+                            <div className="font-semibold text-primary">{process.processGroup}</div>
+                          )}
+                          {process.processRoute && (
+                            <div className="text-muted-foreground">{process.processRoute}</div>
+                          )}
+                          {process.operation && (
+                            <div className="text-xs">{process.operation}</div>
+                          )}
+                          {!process.processGroup && !process.processRoute && !process.operation && (
+                            <span className="text-muted-foreground italic">Not specified</span>
+                          )}
+                        </div>
                       </td>
-                      <td className="p-3 border-r border-border text-xs">
-                        <div className="font-medium">{process.labourType}</div>
-                        <div className="text-muted-foreground text-[10px]">₹{process.labourRate.toFixed(2)}/hr</div>
+                      <td className="p-3 border-r border-border text-xs text-right">
+                        ₹{(process.machineRate || 0).toFixed(2)}/hr
                       </td>
-                      <td className="p-3 border-r border-border text-xs text-right">{process.setupTime}</td>
-                      <td className="p-3 border-r border-border text-xs text-right">{process.batchSize}</td>
-                      <td className="p-3 border-r border-border text-xs text-right">{process.cycleTime}</td>
-                      <td className="p-3 border-r border-border text-xs text-right">{process.partsPerCycle}</td>
-                      <td className="p-3 border-r border-border text-xs text-right">{process.scrap}%</td>
+                      <td className="p-3 border-r border-border text-xs text-right">
+                        ₹{(process.laborRate || 0).toFixed(2)}/hr
+                      </td>
+                      <td className="p-3 border-r border-border text-xs text-right">{process.setupTime || 0}</td>
+                      <td className="p-3 border-r border-border text-xs text-right">{process.batchSize || 0}</td>
+                      <td className="p-3 border-r border-border text-xs text-right">{process.cycleTime || 0}</td>
+                      <td className="p-3 border-r border-border text-xs text-right">{process.partsPerCycle || 0}</td>
+                      <td className="p-3 border-r border-border text-xs text-right">{process.scrap || 0}%</td>
                       <td className="p-3 border-r border-border text-xs text-right font-semibold">
-                        ₹{process.totalCost.toFixed(2)}
+                        ₹{(process.totalCostPerPart || 0).toFixed(2)}
                       </td>
                       <td className="p-3 text-center">
                         <div className="flex items-center justify-center gap-2">
@@ -182,8 +235,8 @@ export function ManufacturingProcessSection() {
                   ))}
 
                   <tr className="bg-secondary/30 font-semibold">
-                    <td colSpan={12} className="p-3 text-right border-r border-border text-xs">
-                      Total:
+                    <td colSpan={9} className="p-3 text-right border-r border-border text-xs">
+                      Total Process Cost:
                     </td>
                     <td className="p-3 border-r border-border text-xs text-right">
                       ₹{calculateTotal()}

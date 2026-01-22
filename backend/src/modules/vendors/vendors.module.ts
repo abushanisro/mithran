@@ -4,12 +4,13 @@ import { MulterModule } from '@nestjs/platform-express';
 import { VendorsController } from './vendors.controller';
 import { VendorsService } from './vendors.service';
 import { LoggerModule } from '../../common/logger/logger.module';
-import { SupabaseService } from '../../common/supabase/supabase.service';
+import { SupabaseModule } from '../../common/supabase/supabase.module';
 
 @Module({
   imports: [
     HttpModule,
     LoggerModule,
+    SupabaseModule,
     MulterModule.register({
       limits: {
         fileSize: 50 * 1024 * 1024, // 50MB for large CSV files
@@ -18,7 +19,7 @@ import { SupabaseService } from '../../common/supabase/supabase.service';
     }),
   ],
   controllers: [VendorsController],
-  providers: [VendorsService, SupabaseService],
+  providers: [VendorsService],
   exports: [VendorsService],
 })
-export class VendorsModule {}
+export class VendorsModule { }

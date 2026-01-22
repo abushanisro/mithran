@@ -29,22 +29,19 @@ export interface CreateLSRDto {
   location?: string;
 }
 
-export interface UpdateLSRDto extends Partial<CreateLSRDto> {}
+export interface UpdateLSRDto extends Partial<CreateLSRDto> { }
 
-export interface LSRStatistics {
-  total: number;
-  byType: Array<{
-    type: string;
-    count: string;
-    avgLHR: string;
-  }>;
-  averageLHR: number;
-}
+
 
 export const lsrApi = {
   getAll: async (search?: string): Promise<LSREntry[]> => {
     const params = search ? { search } : {};
-    const response = await apiClient.get<LSREntry[]>('/lsr', { params });
+    // 2026 Best Practice: Silent mode for background/optional data
+    const response = await apiClient.get<LSREntry[]>('/lsr', {
+      params,
+      silent: true, // Don't show error toasts for background data
+      retry: false, // Fail fast - don't retry background data
+    });
     return response || [];
   },
 
@@ -76,10 +73,7 @@ export const lsrApi = {
     await apiClient.delete(`/lsr/${id}`);
   },
 
-  getStatistics: async (): Promise<LSRStatistics> => {
-    const response = await apiClient.get<LSRStatistics>('/lsr/statistics');
-    return response || { total: 0, byType: [], averageLHR: 0 };
-  },
+
 
   bulkCreate: async (data: CreateLSRDto[]): Promise<LSREntry[]> => {
     const response = await apiClient.post<LSREntry[]>('/lsr/bulk', data);

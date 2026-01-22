@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { cryptoUtils } from '@/lib/utils/crypto-polyfill'
 
 /**
  * Next.js Middleware for CSP Nonce Generation
@@ -9,7 +10,7 @@ import type { NextRequest } from 'next/server'
  */
 
 export function proxy(request: NextRequest) {
-  const nonce = Buffer.from(crypto.randomUUID()).toString('base64')
+  const nonce = Buffer.from(cryptoUtils.generateUUID()).toString('base64')
   const cspHeader = generateCSP(nonce)
 
   const requestHeaders = new Headers(request.headers)
@@ -39,11 +40,13 @@ function generateCSP(nonce: string): string {
     'wss://vercel.live',
     'https://*.pusher.com',
     'wss://*.pusher.com',
+    'https://va.vercel-scripts.com',
   ]
 
   if (isDev) {
     connectSrc.push(
       'http://localhost:4000',
+      'http://127.0.0.1:4000',
       'ws://localhost:4000',
       'http://localhost:5000',
       'ws://localhost:3000',
@@ -57,14 +60,15 @@ function generateCSP(nonce: string): string {
 
   // Use nonce for inline scripts in production
   const scriptSrc = isDev
-    ? "'self' 'unsafe-inline' 'unsafe-eval'"
-    : `'self' 'nonce-${nonce}' 'unsafe-inline'`
+    ? "'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com"
+    : `'self' 'nonce-${nonce}' 'unsafe-inline' https://va.vercel-scripts.com`
 
   const directives = [
     "default-src 'self'",
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
+    "frame-src 'self' https://*.supabase.co",
     "img-src 'self' data: https: blob:",
     "style-src 'self' 'unsafe-inline'",
     `script-src ${scriptSrc}`,

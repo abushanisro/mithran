@@ -17,7 +17,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes } from '
 import { RawMaterialsService } from './raw-materials.service';
 import { CreateRawMaterialDto, UpdateRawMaterialDto, QueryRawMaterialsDto } from './dto/raw-materials.dto';
 import { RawMaterialResponseDto, RawMaterialListResponseDto } from './dto/raw-material-response.dto';
-import { CurrentUser } from '../../common/decorators/user.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AccessToken } from '../../common/decorators/access-token.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 const XLSX = require('xlsx');
@@ -31,19 +31,17 @@ export class RawMaterialsController {
   constructor(private readonly rawMaterialsService: RawMaterialsService) { }
 
   @Get()
-  @Public()
   @ApiOperation({ summary: 'Get all raw materials' })
   @ApiResponse({ status: 200, description: 'Raw materials retrieved successfully', type: RawMaterialListResponseDto })
-  async findAll(@Query() query: QueryRawMaterialsDto, @CurrentUser() user?: any, @AccessToken() token?: string): Promise<RawMaterialListResponseDto> {
-    return this.rawMaterialsService.findAll(query, user?.id, token);
+  async findAll(@Query() query: QueryRawMaterialsDto, @CurrentUser() user: any, @AccessToken() token: string): Promise<RawMaterialListResponseDto> {
+    return this.rawMaterialsService.findAll(query, user.id, token);
   }
 
   @Get('filter-options')
-  @Public()
   @ApiOperation({ summary: 'Get unique filter options for raw materials' })
   @ApiResponse({ status: 200, description: 'Filter options retrieved successfully' })
-  async getFilterOptions(@CurrentUser() user?: any, @AccessToken() token?: string) {
-    return this.rawMaterialsService.getFilterOptions(user?.id, token);
+  async getFilterOptions(@CurrentUser() user: any, @AccessToken() token: string) {
+    return this.rawMaterialsService.getFilterOptions(user.id, token);
   }
 
   @Get('grouped')

@@ -26,6 +26,9 @@ export function useMHRRecords(query?: MHRQuery, options?: { enabled?: boolean })
     queryFn: () => mhrApi.getAll(query),
     staleTime: 1000 * 60 * 5, // 5 minutes
     enabled: options?.enabled !== false,
+    retry: false, // 2026 Best Practice: Fail fast for list queries
+    refetchOnWindowFocus: false,
+    throwOnError: false, // Graceful error handling
   });
 }
 

@@ -8,6 +8,7 @@ import { bomApi } from '../bom';
 import type { CreateBOMData, UpdateBOMData, BOMQuery } from '../bom';
 import { ApiError } from '../client';
 import { toast } from 'sonner';
+import { useAuthEnabled, useAuthEnabledWith } from './useAuthEnabled';
 
 export const bomKeys = {
   all: ['bom'] as const,
@@ -23,6 +24,7 @@ export function useBOMs(query?: BOMQuery) {
     queryKey: bomKeys.list(query),
     queryFn: () => bomApi.getAll(query),
     staleTime: 1000 * 60 * 5,
+    enabled: useAuthEnabled(),
   });
 }
 
@@ -30,7 +32,7 @@ export function useBOM(id: string, includeItems = true) {
   return useQuery({
     queryKey: bomKeys.detail(id),
     queryFn: () => bomApi.getById(id, includeItems),
-    enabled: !!id,
+    enabled: useAuthEnabledWith(!!id),
     staleTime: 1000 * 60 * 5,
   });
 }
@@ -39,7 +41,7 @@ export function useBOMCostBreakdown(bomId: string) {
   return useQuery({
     queryKey: bomKeys.costBreakdown(bomId),
     queryFn: () => bomApi.getCostBreakdown(bomId),
-    enabled: !!bomId,
+    enabled: useAuthEnabledWith(!!bomId),
     staleTime: 1000 * 60 * 2,
   });
 }

@@ -111,7 +111,6 @@ export default function MHRDetailPage() {
         data: editableInputs,
       });
 
-      console.log('MHR record updated successfully');
       setIsEditMode(false);
     } catch (error) {
       console.error('Failed to update MHR record:', error);

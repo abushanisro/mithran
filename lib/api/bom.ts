@@ -123,21 +123,21 @@ export const bomApi = {
    * Create new BOM
    */
   create: async (data: CreateBOMData): Promise<BOM> => {
-    return apiClient.post<BOM>('/bom', data);
+    return apiClient.post<BOM>('/bom', data) as Promise<BOM>;
   },
 
   /**
    * Update BOM
    */
   update: async (id: string, data: UpdateBOMData): Promise<BOM> => {
-    return apiClient.put<BOM>(`/bom/${id}`, data);
+    return apiClient.put<BOM>(`/bom/${id}`, data) as Promise<BOM>;
   },
 
   /**
    * Delete BOM
    */
   delete: async (id: string): Promise<void> => {
-    return apiClient.delete(`/bom/${id}`);
+    return apiClient.delete(`/bom/${id}`) as Promise<void>;
   },
 
   /**
@@ -151,7 +151,7 @@ export const bomApi = {
    * Add BOM item
    */
   addItem: async (bomId: string, data: CreateBOMItemData): Promise<BOMItem> => {
-    return apiClient.post<BOMItem>(`/bom/${bomId}/items`, data);
+    return apiClient.post<BOMItem>(`/bom/${bomId}/items`, data) as Promise<BOMItem>;
   },
 
   /**
@@ -162,35 +162,35 @@ export const bomApi = {
     itemId: string,
     data: UpdateBOMItemData,
   ): Promise<BOMItem> => {
-    return apiClient.put<BOMItem>(`/bom/${bomId}/items/${itemId}`, data);
+    return apiClient.put<BOMItem>(`/bom/${bomId}/items/${itemId}`, data) as Promise<BOMItem>;
   },
 
   /**
    * Delete BOM item
    */
   deleteItem: async (bomId: string, itemId: string): Promise<void> => {
-    return apiClient.delete(`/bom/${bomId}/items/${itemId}`);
+    return apiClient.delete(`/bom/${bomId}/items/${itemId}`) as Promise<void>;
   },
 
   /**
    * Get BOM cost breakdown
    */
   getCostBreakdown: async (bomId: string): Promise<BOMCostBreakdown> => {
-    return apiClient.get<BOMCostBreakdown>(`/bom/${bomId}/cost-breakdown`);
+    return apiClient.get<BOMCostBreakdown>(`/bom/${bomId}/cost-report`);
   },
 
   /**
    * Approve BOM
    */
   approve: async (bomId: string): Promise<BOM> => {
-    return apiClient.post<BOM>(`/bom/${bomId}/approve`, {});
+    return apiClient.post<BOM>(`/bom/${bomId}/approve`, {}) as Promise<BOM>;
   },
 
   /**
    * Release BOM
    */
   release: async (bomId: string): Promise<BOM> => {
-    return apiClient.post<BOM>(`/bom/${bomId}/release`, {});
+    return apiClient.post<BOM>(`/bom/${bomId}/release`, {}) as Promise<BOM>;
   },
 
   /**

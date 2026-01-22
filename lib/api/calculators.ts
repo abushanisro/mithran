@@ -266,73 +266,73 @@ export const calculatorsApi = {
     const queryString = params.toString();
     return apiClient.get<CalculatorListResponse>(
       `/calculators${queryString ? `?${queryString}` : ''}`,
-    );
+    ) as Promise<CalculatorListResponse>;
   },
 
   getById: async (id: string): Promise<Calculator> => {
-    return apiClient.get<Calculator>(`/calculators/${id}`);
+    return apiClient.get<Calculator>(`/calculators/${id}`) as Promise<Calculator>;
   },
 
   create: async (data: CreateCalculatorData): Promise<Calculator> => {
-    return apiClient.post<Calculator>('/calculators', data);
+    return apiClient.post<Calculator>('/calculators', data) as Promise<Calculator>;
   },
 
   update: async (id: string, data: UpdateCalculatorData): Promise<Calculator> => {
-    return apiClient.put<Calculator>(`/calculators/${id}`, data);
+    return apiClient.put<Calculator>(`/calculators/${id}`, data) as Promise<Calculator>;
   },
 
   delete: async (id: string): Promise<void> => {
-    return apiClient.delete(`/calculators/${id}`);
+    return apiClient.delete<void>(`/calculators/${id}`) as Promise<void>;
   },
 
   // Field operations
   getFields: async (calculatorId: string): Promise<CalculatorField[]> => {
-    return apiClient.get<CalculatorField[]>(`/calculators/${calculatorId}/fields`);
+    return apiClient.get<CalculatorField[]>(`/calculators/${calculatorId}/fields`) as Promise<CalculatorField[]>;
   },
 
   createField: async (data: CreateFieldData): Promise<CalculatorField> => {
     const { calculatorId, ...fieldData } = data;
-    return apiClient.post<CalculatorField>(`/calculators/${calculatorId}/fields`, fieldData);
+    return apiClient.post<CalculatorField>(`/calculators/${calculatorId}/fields`, fieldData) as Promise<CalculatorField>;
   },
 
   updateField: async (calculatorId: string, fieldId: string, data: UpdateFieldData): Promise<CalculatorField> => {
-    return apiClient.put<CalculatorField>(`/calculators/${calculatorId}/fields/${fieldId}`, data);
+    return apiClient.put<CalculatorField>(`/calculators/${calculatorId}/fields/${fieldId}`, data) as Promise<CalculatorField>;
   },
 
   deleteField: async (calculatorId: string, fieldId: string): Promise<void> => {
-    return apiClient.delete(`/calculators/${calculatorId}/fields/${fieldId}`);
+    return apiClient.delete<void>(`/calculators/${calculatorId}/fields/${fieldId}`) as Promise<void>;
   },
 
   // Formula operations
   getFormulas: async (calculatorId: string): Promise<CalculatorFormula[]> => {
-    return apiClient.get<CalculatorFormula[]>(`/calculators/${calculatorId}/formulas`);
+    return apiClient.get<CalculatorFormula[]>(`/calculators/${calculatorId}/formulas`) as Promise<CalculatorFormula[]>;
   },
 
   createFormula: async (data: CreateFormulaData): Promise<CalculatorFormula> => {
     const { calculatorId, ...formulaData } = data;
-    return apiClient.post<CalculatorFormula>(`/calculators/${calculatorId}/formulas`, formulaData);
+    return apiClient.post<CalculatorFormula>(`/calculators/${calculatorId}/formulas`, formulaData) as Promise<CalculatorFormula>;
   },
 
   updateFormula: async (calculatorId: string, formulaId: string, data: UpdateFormulaData): Promise<CalculatorFormula> => {
-    return apiClient.put<CalculatorFormula>(`/calculators/${calculatorId}/formulas/${formulaId}`, data);
+    return apiClient.put<CalculatorFormula>(`/calculators/${calculatorId}/formulas/${formulaId}`, data) as Promise<CalculatorFormula>;
   },
 
   deleteFormula: async (calculatorId: string, formulaId: string): Promise<void> => {
-    return apiClient.delete(`/calculators/${calculatorId}/formulas/${formulaId}`);
+    return apiClient.delete<void>(`/calculators/${calculatorId}/formulas/${formulaId}`) as Promise<void>;
   },
 
   validateFormula: async (data: ValidateFormulaData): Promise<FormulaValidationResult> => {
-    return apiClient.post<FormulaValidationResult>('/calculators/formulas/validate', data);
+    return apiClient.post<FormulaValidationResult>('/calculators/formulas/validate', data) as Promise<FormulaValidationResult>;
   },
 
   // Execution
   execute: async (data: ExecuteCalculatorData): Promise<ExecutionResult> => {
     const { calculatorId, ...executeData } = data;
-    return apiClient.post<ExecutionResult>(`/calculators/${calculatorId}/execute`, executeData);
+    return apiClient.post<ExecutionResult>(`/calculators/${calculatorId}/execute`, executeData) as Promise<ExecutionResult>;
   },
 
   saveExecution: async (data: SaveExecutionData): Promise<CalculatorExecution> => {
-    return apiClient.post<CalculatorExecution>('/calculators/executions', data);
+    return apiClient.post<CalculatorExecution>('/calculators/executions', data) as Promise<CalculatorExecution>;
   },
 
   getExecutions: async (query?: ExecutionQuery): Promise<ExecutionListResponse> => {
@@ -346,19 +346,19 @@ export const calculatorsApi = {
     const queryString = params.toString();
     return apiClient.get<ExecutionListResponse>(
       `/calculators/executions${queryString ? `?${queryString}` : ''}`,
-    );
+    ) as Promise<ExecutionListResponse>;
   },
 
   getExecution: async (executionId: string): Promise<CalculatorExecution> => {
-    return apiClient.get<CalculatorExecution>(`/calculators/executions/${executionId}`);
+    return apiClient.get<CalculatorExecution>(`/calculators/executions/${executionId}`) as Promise<CalculatorExecution>;
   },
 
   // Database lookups
   resolveDatabaseField: async (data: ResolveDatabaseFieldData): Promise<{ value: number }> => {
-    return apiClient.post<{ value: number }>('/calculators/resolve-field', data);
+    return apiClient.post<{ value: number }>('/calculators/resolve-field', data) as Promise<{ value: number }>;
   },
 
   getLookupOptions: async (data: GetLookupOptionsData): Promise<LookupRecord[]> => {
-    return apiClient.post<LookupRecord[]>('/calculators/lookup', data);
+    return apiClient.post<LookupRecord[]>('/calculators/lookup', data) as Promise<LookupRecord[]>;
   },
 };

@@ -29,7 +29,7 @@ import {
   ProcessCalculatorMappingListResponseDto,
   ProcessHierarchyDto,
 } from './dto/process-calculator-mapping.dto';
-import { CurrentUser } from '../../common/decorators/user.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AccessToken } from '../../common/decorators/access-token.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 
@@ -45,22 +45,20 @@ export class ProcessesController {
   // ============================================================================
 
   @Get('calculator-mappings/hierarchy')
-  @Public()
   @ApiOperation({ summary: 'Get unique process hierarchy values for filters' })
   @ApiResponse({ status: 200, description: 'Process hierarchy retrieved successfully', type: ProcessHierarchyDto })
-  async getProcessHierarchy(@AccessToken() token?: string): Promise<ProcessHierarchyDto> {
-    return this.processesService.getProcessHierarchy(token || '');
+  async getProcessHierarchy(@AccessToken() token: string): Promise<ProcessHierarchyDto> {
+    return this.processesService.getProcessHierarchy(token);
   }
 
   @Get('calculator-mappings')
-  @Public()
   @ApiOperation({ summary: 'Get all process calculator mappings' })
   @ApiResponse({ status: 200, description: 'Process calculator mappings retrieved successfully', type: ProcessCalculatorMappingListResponseDto })
   async getProcessCalculatorMappings(
     @Query() query: QueryProcessCalculatorMappingsDto,
-    @AccessToken() token?: string,
+    @AccessToken() token: string,
   ): Promise<ProcessCalculatorMappingListResponseDto> {
-    return this.processesService.getProcessCalculatorMappings(query, token || '');
+    return this.processesService.getProcessCalculatorMappings(query, token);
   }
 
   @Get('calculator-mappings/:id')
@@ -108,11 +106,10 @@ export class ProcessesController {
   // ============================================================================
 
   @Get()
-  @Public()
   @ApiOperation({ summary: 'Get all processes' })
   @ApiResponse({ status: 200, description: 'Processes retrieved successfully', type: ProcessListResponseDto })
-  async findAll(@Query() query: QueryProcessesDto, @CurrentUser() user?: any, @AccessToken() token?: string): Promise<ProcessListResponseDto> {
-    return this.processesService.findAll(query, user?.id, token);
+  async findAll(@Query() query: QueryProcessesDto, @CurrentUser() user: any, @AccessToken() token: string): Promise<ProcessListResponseDto> {
+    return this.processesService.findAll(query, user.id, token);
   }
 
   @Get(':id')
@@ -238,5 +235,43 @@ export class ProcessesController {
     // Ensure tableId from URL matches DTO
     bulkDto.tableId = tableId;
     return this.processesService.bulkUpdateTableRows(bulkDto, token);
+  }
+
+  // ============================================================================
+  // VENDOR PROCESS CAPABILITIES (Industry-standard for supplier evaluation)
+  // ============================================================================
+
+  @Get('vendors-by-process/:processId')
+  @ApiOperation({
+    summary: 'Get vendors capable of performing a specific process',
+    description: 'Industry-standard: Returns vendors filtered by process capability for supplier evaluation. Evaluation = BOM × Vendor × Process',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of capable vendors with their capability metadata',
+  })
+  async getVendorsByProcess(
+    @Param('processId') processId: string,
+    @CurrentUser('id') userId: string, // Extract only the user ID, not the entire user object
+    @AccessToken() token: string,
+  ) {
+    return this.processesService.getVendorsByProcess(processId, userId, token);
+  }
+
+  @Get('by-vendor/:vendorId')
+  @ApiOperation({
+    summary: 'Get processes that a vendor can perform',
+    description: 'Returns process capabilities for a specific vendor',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of processes vendor can perform',
+  })
+  async getProcessesByVendor(
+    @Param('vendorId') vendorId: string,
+    @CurrentUser('id') userId: string,
+    @AccessToken() token: string,
+  ) {
+    return this.processesService.getProcessesByVendor(vendorId, userId, token);
   }
 }

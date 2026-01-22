@@ -34,7 +34,7 @@ import {
   SessionResponseDto,
   UserRoleResponseDto,
 } from './dto/process-route-response.dto';
-import { CurrentUser } from '../../common/decorators/user.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AccessToken } from '../../common/decorators/access-token.decorator';
 
 @ApiTags('Process Routes')

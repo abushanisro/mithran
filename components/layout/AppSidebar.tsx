@@ -10,6 +10,7 @@ import {
   Calculator,
   Table,
   Sigma,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { NavLink } from '@/components/common/nav-link';
 import { useAuth } from '@/lib/providers/auth';
@@ -31,6 +32,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 
 const databaseItems = [
+  { title: 'BOMs', url: '/bom', icon: FileSpreadsheet },
   { title: 'Vendors', url: '/vendors', icon: Users },
   { title: 'Raw Materials', url: '/raw-materials', icon: Database },
   { title: 'MHR', url: '/mhr-database', icon: Calculator },
@@ -46,6 +48,14 @@ export function AppSidebar() {
   const collapsed = state === 'collapsed';
   const pathname = usePathname();
   const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
 
   const isActive = (path: string) => {
     if (!pathname) return false;
@@ -156,16 +166,16 @@ export function AppSidebar() {
               </p>
             </div>
           )}
-          {!collapsed && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-sidebar-foreground/50 hover:text-destructive hover:bg-destructive/10 shrink-0"
-              onClick={signOut}
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            type="button"
+            className="h-8 w-8 text-sidebar-foreground/50 hover:text-destructive hover:bg-destructive/10 shrink-0"
+            onClick={handleSignOut}
+            aria-label="Sign out"
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
         </div>
       </SidebarFooter>
     </Sidebar>

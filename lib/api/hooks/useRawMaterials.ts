@@ -198,11 +198,16 @@ export function useDeleteAllRawMaterials() {
   return useMutation({
     mutationFn: async () => {
       const response = await apiClient.delete<{ message: string; deleted: number }>('/raw-materials');
+
+      if (!response) {
+        throw new Error('Failed to delete all materials');
+      }
+
       return response;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['raw-materials'] });
-      toast.success(data.message || `Deleted ${data.deleted} material(s)`);
+      toast.success(`Successfully deleted ${data.deleted} materials`);
     },
     onError: (error: any) => {
       toast.error(error?.message || 'Failed to delete all materials');
@@ -218,7 +223,9 @@ export function useUploadRawMaterialsExcel() {
       const formData = new FormData();
       formData.append('file', file);
 
-      console.log('Starting Excel upload...');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Excel Upload] Starting...');
+      }
 
       const response = await apiClient.uploadFiles<{
         message: string;
@@ -229,26 +236,25 @@ export function useUploadRawMaterialsExcel() {
         timeout: 300000, // 5 minutes timeout
       });
 
-      console.log('Upload completed:', response);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Excel Upload] Completed:', response);
+      }
       return response;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['raw-materials'] });
 
-      // Log detailed errors to console for debugging
-      if (data.errors && data.errors.length > 0) {
-        console.group('📋 Excel Upload Errors');
+      // Log detailed errors to console for debugging (development only)
+      if (process.env.NODE_ENV === 'development' && data.errors && data.errors.length > 0) {
+        console.group('Excel Upload Errors');
         console.table(data.errors.slice(0, 10)); // Show first 10 in table format
 
         if (data.errors[0]) {
-          console.log('First Error Details:', data.errors[0]);
 
           if (data.errors[0].columns) {
-            console.log('Available columns in Excel:', data.errors[0].columns);
           }
 
           if (data.errors[0].message) {
-            console.log('Error message:', data.errors[0].message);
           }
         }
 
