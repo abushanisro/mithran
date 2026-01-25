@@ -39,6 +39,13 @@ const UUID_FIELD_NAMES = [
 ];
 
 /**
+ * UUID array field names in request bodies
+ */
+const UUID_ARRAY_FIELD_NAMES = [
+  'bomItemIds', 'vendorIds', 'itemIds', 'supplierIds', 'processIds'
+];
+
+/**
  * Extract potential UUID values from a request path
  */
 function extractUUIDsFromPath(path: string): Array<{ value: string; position: number }> {
@@ -103,13 +110,31 @@ function extractUUIDsFromBody(body: any): Array<{ field: string; value: any }> {
     }
   });
 
+  // Check UUID array fields
+  UUID_ARRAY_FIELD_NAMES.forEach(fieldName => {
+    if (fieldName in body && Array.isArray(body[fieldName])) {
+      const arrayValues = body[fieldName] as any[];
+      arrayValues.forEach((value, index) => {
+        if (value != null && value !== '' && value !== undefined) {
+          uuids.push({
+            field: `${fieldName}[${index}]`,
+            value: value
+          });
+        }
+      });
+    }
+  });
+
   // Recursively check nested objects
   Object.entries(body).forEach(([key, value]) => {
     if (key.toLowerCase().includes('id') && value != null && value !== '' && value !== undefined) {
-      uuids.push({
-        field: key,
-        value: value
-      });
+      // Skip array fields as they are handled separately above
+      if (!UUID_ARRAY_FIELD_NAMES.includes(key) && !Array.isArray(value)) {
+        uuids.push({
+          field: key,
+          value: value
+        });
+      }
     }
 
     // Check arrays for UUID values
@@ -245,6 +270,11 @@ export const uuidRequestInterceptor: RequestInterceptor = async (config: Request
         // Handle direct fields - skip validation for empty/null values
         if (value === '' || value === null || value === undefined) {
           continue; // Skip empty optional fields
+        }
+        
+        // Skip array fields as they should be handled by array logic above
+        if (UUID_ARRAY_FIELD_NAMES.includes(field) && Array.isArray(value)) {
+          continue;
         }
         
         const validation = uuidValidator.validate(value, field);

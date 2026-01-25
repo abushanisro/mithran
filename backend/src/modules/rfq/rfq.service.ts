@@ -1,11 +1,19 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { SupabaseService } from '../../common/supabase/supabase.service';
 import { CreateRfqDto } from './dto/create-rfq.dto';
 import { RfqRecord, RfqSummary, RfqStatus } from './dto/rfq-response.dto';
+import { RfqEmailService } from './services/rfq-email.service';
+import { RfqTrackingService } from './services/rfq-tracking.service';
 
 @Injectable()
 export class RfqService {
-  constructor(private readonly supabaseService: SupabaseService) { }
+  private readonly logger = new Logger(RfqService.name);
+
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly rfqEmailService: RfqEmailService,
+    private readonly rfqTrackingService: RfqTrackingService
+  ) { }
 
   async create(userId: string, createRfqDto: CreateRfqDto): Promise<RfqRecord> {
     const {
@@ -98,7 +106,7 @@ export class RfqService {
     return this.mapToRfqRecord(data);
   }
 
-  async sendRfq(id: string, userId: string): Promise<void> {
+  async sendRfq(id: string, userId: string, accessToken?: string): Promise<void> {
     // First validate the RFQ exists and belongs to the user
     const rfq = await this.findOne(id, userId);
 
@@ -114,8 +122,13 @@ export class RfqService {
       throw new BadRequestException(`Failed to send RFQ: ${error.message}`);
     }
 
-    // TODO: Implement email sending logic here
-    // This would integrate with an email service to send the RFQ to vendors
+    // Send RFQ emails to all vendors
+    await this.rfqEmailService.sendRfqEmails(rfq);
+
+    // Always create tracking record - essential for production
+    if (accessToken) {
+      await this.createRfqTrackingRecord(rfq, userId, accessToken);
+    }
   }
 
   async closeRfq(id: string, userId: string): Promise<void> {
@@ -215,5 +228,148 @@ export class RfqService {
       createdAt: row.created_at,
       sentAt: row.sent_at,
     };
+  }
+
+  /**
+   * Production-grade RFQ tracking record creation
+   */
+  private async createRfqTrackingRecord(rfq: RfqRecord, userId: string, accessToken: string): Promise<void> {
+    try {
+      this.logger.log(`Creating RFQ tracking for RFQ: ${rfq.id}`, 'RfqService');
+      
+      // Get vendor and BOM details with fallbacks
+      const [vendorDetails, bomDetails] = await Promise.allSettled([
+        this.getVendorDetails(rfq.vendorIds, accessToken),
+        this.getBomItemDetails(rfq.bomItemIds, accessToken)
+      ]);
+
+      const vendors = vendorDetails.status === 'fulfilled' 
+        ? vendorDetails.value 
+        : rfq.vendorIds.map(id => ({ id, name: 'Unknown Vendor' }));
+
+      const parts = bomDetails.status === 'fulfilled' 
+        ? bomDetails.value 
+        : rfq.bomItemIds.map(id => ({
+            id,
+            partNumber: 'Unknown Part',
+            description: 'Part details unavailable',
+            process: 'Unknown Process'
+          }));
+
+      // Create tracking record with guaranteed data
+      const trackingRecord = await this.rfqTrackingService.createTracking(userId, accessToken, {
+        rfqId: rfq.id,
+        projectId: rfq.projectId,
+        rfqName: rfq.rfqName,
+        rfqNumber: rfq.rfqNumber,
+        vendors,
+        parts
+      });
+
+      this.logger.log(`Successfully created RFQ tracking: ${trackingRecord.id} for RFQ: ${rfq.id}`, 'RfqService');
+    } catch (error) {
+      this.logger.error(`Critical: Failed to create RFQ tracking for RFQ ${rfq.id}: ${error.message}`, 'RfqService');
+      
+      // Create minimal tracking record as fallback
+      try {
+        await this.createFallbackTrackingRecord(rfq, userId, accessToken);
+      } catch (fallbackError) {
+        this.logger.error(`Failed to create fallback tracking for RFQ ${rfq.id}: ${fallbackError.message}`, 'RfqService');
+        // Don't throw - RFQ send should still succeed
+      }
+    }
+  }
+
+  /**
+   * Fallback tracking record creation with minimal data
+   */
+  private async createFallbackTrackingRecord(rfq: RfqRecord, userId: string, accessToken: string): Promise<void> {
+    const fallbackVendors = rfq.vendorIds.map(id => ({
+      id,
+      name: 'Unknown Vendor'
+    }));
+
+    const fallbackParts = rfq.bomItemIds.map(id => ({
+      id,
+      partNumber: 'Unknown Part',
+      description: 'Part details unavailable',
+      process: 'Unknown Process'
+    }));
+
+    await this.rfqTrackingService.createTracking(userId, accessToken, {
+      rfqId: rfq.id,
+      projectId: rfq.projectId,
+      rfqName: rfq.rfqName,
+      rfqNumber: rfq.rfqNumber,
+      vendors: fallbackVendors,
+      parts: fallbackParts
+    });
+
+    this.logger.log(`Created fallback tracking record for RFQ: ${rfq.id}`, 'RfqService');
+  }
+
+  /**
+   * Get vendor details for tracking
+   */
+  private async getVendorDetails(vendorIds: string[], accessToken: string): Promise<Array<{
+    id: string;
+    name: string;
+    email?: string;
+  }>> {
+    const { data, error } = await this.supabaseService
+      .getClient(accessToken)
+      .from('vendors')
+      .select('id, name, company_email')
+      .in('id', vendorIds);
+
+    if (error) {
+      this.logger.warn(`Failed to fetch vendor details: ${error.message}`, 'RfqService');
+      return vendorIds.map(id => ({ id, name: 'Unknown Vendor' }));
+    }
+
+    return data.map(vendor => ({
+      id: vendor.id,
+      name: vendor.name,
+      email: vendor.company_email
+    }));
+  }
+
+  /**
+   * Get BOM item details for tracking
+   */
+  private async getBomItemDetails(bomItemIds: string[], accessToken: string): Promise<Array<{
+    id: string;
+    partNumber: string;
+    description: string;
+    process: string;
+    quantity?: number;
+    file2dPath?: string;
+    file3dPath?: string;
+  }>> {
+    const { data, error } = await this.supabaseService
+      .getClient(accessToken)
+      .from('bom_items')
+      .select('id, part_number, description, process, quantity, file_2d_path, file_3d_path')
+      .in('id', bomItemIds);
+
+    if (error) {
+      this.logger.warn(`Failed to fetch BOM item details: ${error.message}`, 'RfqService');
+      return bomItemIds.map(id => ({
+        id,
+        partNumber: 'Unknown Part',
+        description: 'Part details unavailable',
+        process: 'Unknown Process'
+      }));
+    }
+
+    return data.map(item => ({
+      id: item.id,
+      partNumber: item.part_number,
+      description: item.description || 'No description',
+      process: item.process || 'No process specified',
+      quantity: item.quantity,
+      file2dPath: item.file_2d_path,
+      file3dPath: item.file_3d_path
+    }));
   }
 }

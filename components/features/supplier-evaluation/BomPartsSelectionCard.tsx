@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus } from 'lucide-react';
+import { Search, Plus, FileText, Box, Eye } from 'lucide-react';
 
 interface BOMItem {
   id: string;
@@ -15,6 +15,8 @@ interface BOMItem {
   processType: string;
   quantity: number;
   selected?: boolean;
+  file2dPath?: string;
+  file3dPath?: string;
 }
 
 interface BomPartsSelectionCardProps {
@@ -27,6 +29,7 @@ interface BomPartsSelectionCardProps {
   onGroupNameChange: (name: string) => void;
   onCreateGroup?: () => void;
   isCreatingGroup?: boolean;
+  onViewFile?: (item: BOMItem, fileType: '2d' | '3d') => void;
 }
 
 export function BomPartsSelectionCard({
@@ -38,7 +41,8 @@ export function BomPartsSelectionCard({
   onClearSelection,
   onGroupNameChange,
   onCreateGroup,
-  isCreatingGroup = false
+  isCreatingGroup = false,
+  onViewFile
 }: BomPartsSelectionCardProps) {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -138,7 +142,8 @@ export function BomPartsSelectionCard({
               <div className="col-span-3">DESCRIPTION</div>
               <div className="col-span-2">CATEGORY</div>
               <div className="col-span-2">PROCESS</div>
-              <div className="col-span-2">QTY</div>
+              <div className="col-span-1">QTY</div>
+              <div className="col-span-1">FILES</div>
             </div>
           </div>
 
@@ -152,9 +157,8 @@ export function BomPartsSelectionCard({
               filteredItems.map((item) => (
                 <div
                   key={item.id}
-                  className={`grid grid-cols-12 gap-4 p-4 border-b hover:bg-gray-50 cursor-pointer transition-colors ${selectedItems.includes(item.id) ? 'bg-teal-50 border-teal-200' : ''
+                  className={`grid grid-cols-12 gap-4 p-4 border-b hover:bg-gray-50 transition-colors ${selectedItems.includes(item.id) ? 'bg-teal-50 border-teal-200' : ''
                     }`}
-                  onClick={() => onItemToggle(item.id, !selectedItems.includes(item.id))}
                 >
                   <div className="col-span-1 flex items-center">
                     <Checkbox
@@ -162,22 +166,66 @@ export function BomPartsSelectionCard({
                       onCheckedChange={(checked) => onItemToggle(item.id, checked as boolean)}
                     />
                   </div>
-                  <div className="col-span-2 text-sm font-medium">
+                  <div 
+                    className="col-span-2 text-sm font-medium cursor-pointer"
+                    onClick={() => onItemToggle(item.id, !selectedItems.includes(item.id))}
+                  >
                     {item.partNumber}
                   </div>
-                  <div className="col-span-3 text-sm text-gray-600">
+                  <div 
+                    className="col-span-3 text-sm text-gray-600 cursor-pointer"
+                    onClick={() => onItemToggle(item.id, !selectedItems.includes(item.id))}
+                  >
                     {item.description}
                   </div>
-                  <div className="col-span-2">
+                  <div 
+                    className="col-span-2 cursor-pointer"
+                    onClick={() => onItemToggle(item.id, !selectedItems.includes(item.id))}
+                  >
                     <Badge variant="outline" className="text-xs">
                       {item.category}
                     </Badge>
                   </div>
-                  <div className="col-span-2 text-sm text-gray-600">
+                  <div 
+                    className="col-span-2 text-sm text-gray-600 cursor-pointer"
+                    onClick={() => onItemToggle(item.id, !selectedItems.includes(item.id))}
+                  >
                     {item.processType}
                   </div>
-                  <div className="col-span-2 text-sm font-medium">
+                  <div 
+                    className="col-span-1 text-sm font-medium cursor-pointer"
+                    onClick={() => onItemToggle(item.id, !selectedItems.includes(item.id))}
+                  >
                     {item.quantity}
+                  </div>
+                  <div className="col-span-1 flex items-center gap-1">
+                    {item.file2dPath && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onViewFile?.(item, '2d');
+                        }}
+                        className="p-1 hover:bg-blue-100 rounded text-blue-600 transition-colors"
+                        title="View 2D Drawing"
+                      >
+                        <FileText className="h-3 w-3" />
+                      </button>
+                    )}
+                    {item.file3dPath && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onViewFile?.(item, '3d');
+                        }}
+                        className="p-1 hover:bg-purple-100 rounded text-purple-600 transition-colors"
+                        title="View 3D Model"
+                      >
+                        <Box className="h-3 w-3" />
+                      </button>
+                    )}
+                    {!item.file2dPath && !item.file3dPath && (
+                      <span className="text-xs text-gray-400">—</span>
+                    )}
                   </div>
                 </div>
               ))

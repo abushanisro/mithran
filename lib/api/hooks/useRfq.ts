@@ -7,6 +7,7 @@ import { rfqApi, type CreateRfqData, type RfqQuery } from '../rfq';
 import { ApiError } from '../client';
 import { toast } from 'sonner';
 import { useAuthEnabled, useAuthEnabledWith } from './useAuthEnabled';
+import { rfqTrackingKeys } from './useRfqTracking';
 
 export const rfqKeys = {
   all: ['rfq'] as const,

@@ -67,9 +67,9 @@ export class VendorsService {
       queryBuilder = queryBuilder.eq('country', query.country);
     }
 
-    // Apply process filter (array contains)
+    // Apply process filter (array overlap)
     if (query.process && query.process.length > 0) {
-      queryBuilder = queryBuilder.contains('process', query.process);
+      queryBuilder = queryBuilder.overlaps('process', query.process);
     }
 
     // Apply industries filter
@@ -176,9 +176,10 @@ export class VendorsService {
   async findOne(id: string, userId: string, accessToken: string) {
     this.logger.log(`Fetching vendor: ${id} from shared database`, 'VendorsService');
 
+    // Query vendors table directly to ensure we get the company_email field
     const { data, error } = await this.supabaseService
       .getClient(accessToken)
-      .from('vendor_summary')
+      .from('vendors')
       .select('*')
       .eq('id', id)
       .single();
@@ -188,7 +189,8 @@ export class VendorsService {
       throw new NotFoundException(`Vendor with ID ${id} not found`);
     }
 
-    return data;
+    // Convert snake_case to camelCase for frontend consumption
+    return this.convertToCamelCase(data);
   }
 
   async create(createVendorDto: CreateVendorDto, userId: string, accessToken: string) {

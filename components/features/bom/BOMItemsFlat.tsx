@@ -158,8 +158,32 @@ export function BOMItemsFlat({ bomId, onEditItem, onViewItem, onAddChildItem }: 
                     </div>
                   )}
                   <div>
-                    <span className="text-muted-foreground">Total: </span>
-                    <span className="font-medium">{item.quantity}</span>
+                    <span className="text-muted-foreground">Files: </span>
+                    <div className="flex items-center gap-1">
+                      {item.file2dPath && (
+                        <button
+                          onClick={() => onViewItem?.(item, '2d')}
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 hover:bg-blue-100 text-blue-700 transition-colors"
+                          title={`2D: ${item.file2dPath.split('/').pop()?.replace(/^\d+_/, '') || 'drawing'}`}
+                        >
+                          <FileText className="h-3 w-3" />
+                          <span className="text-[10px] font-medium">2D</span>
+                        </button>
+                      )}
+                      {item.file3dPath && (
+                        <button
+                          onClick={() => onViewItem?.(item, '3d')}
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-50 hover:bg-purple-100 text-purple-700 transition-colors"
+                          title={`3D: ${item.file3dPath.split('/').pop()?.replace(/^\d+_/, '') || 'model'}`}
+                        >
+                          <Box className="h-3 w-3" />
+                          <span className="text-[10px] font-medium">3D</span>
+                        </button>
+                      )}
+                      {!item.file2dPath && !item.file3dPath && (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

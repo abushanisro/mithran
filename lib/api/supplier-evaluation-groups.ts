@@ -11,6 +11,7 @@ import { apiClient } from './client';
 
 export type BomItemForEvaluation = {
   id: string;
+  bomId?: string;
   name: string;
   partNumber?: string;
   material?: string;
@@ -65,6 +66,8 @@ export type UpdateSupplierEvaluationGroupData = {
   description?: string;
   notes?: string;
   status?: 'draft' | 'active' | 'completed' | 'archived';
+  bomItems?: BomItemForEvaluation[];
+  processes?: ProcessForEvaluation[];
 };
 
 // ============================================================================

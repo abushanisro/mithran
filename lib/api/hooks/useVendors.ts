@@ -100,6 +100,8 @@ export function useUpdateVendor() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: vendorKeys.lists() });
       queryClient.invalidateQueries({ queryKey: vendorKeys.detail(variables.id) });
+      // Also invalidate vendor ratings cache since it includes vendor data
+      queryClient.invalidateQueries({ queryKey: ['vendorRatings'] });
       toast.success('Vendor updated successfully');
     },
     onError: (error: ApiError) => {

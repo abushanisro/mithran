@@ -1,11 +1,16 @@
 import { IsUUID, IsString, IsOptional, IsArray, ValidateNested, IsNumber, IsBoolean, IsIn } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class BomItemDto {
   @ApiProperty()
   @IsUUID()
   id: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  bomId?: string;
 
   @ApiProperty()
   @IsString()
@@ -100,6 +105,20 @@ export class UpdateSupplierEvaluationGroupDto {
   @IsOptional()
   @IsIn(['draft', 'active', 'completed', 'archived'])
   status?: 'draft' | 'active' | 'completed' | 'archived';
+
+  @ApiProperty({ type: [BomItemDto], required: false })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => BomItemDto)
+  bomItems?: BomItemDto[];
+
+  @ApiProperty({ type: [ProcessDto], required: false })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ProcessDto)
+  processes?: ProcessDto[];
 }
 
 export class SupplierEvaluationGroupDto {

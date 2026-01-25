@@ -6,7 +6,7 @@ This document covers the advanced enterprise features that address the gaps in t
 
 ---
 
-## 1. ✅ Distributed Tracing with W3C Trace Context
+## 1. Distributed Tracing with W3C Trace Context
 
 ### Problem Addressed
 **Critical Gap**: Without distributed tracing, debugging multi-service failures is incomplete. You cannot correlate:

@@ -55,6 +55,7 @@ import { ProcessCostDialog } from '@/components/features/process-planning/Proces
 import { toast } from 'sonner';
 
 const evaluationFormSchema = z.object({
+  supplierGroupName: z.string().min(1, 'Please enter a supplier group name').max(100, 'Name must be less than 100 characters'),
   bomId: z.string().min(1, 'Please select a BOM').refine((val) => {
     const validation = uuidValidator.validate(val, 'BOM ID');
     return validation.isValid;
@@ -94,11 +95,13 @@ export function NewEvaluationDialog({
   const form = useForm<EvaluationFormData>({
     resolver: zodResolver(evaluationFormSchema),
     defaultValues: {
+      supplierGroupName: '',
       bomId: '',
       bomItemIds: [],
       processSelections: [],
       notes: '',
     },
+    mode: 'onChange',
   });
 
   // Watch form values for dependent queries
@@ -133,23 +136,13 @@ export function NewEvaluationDialog({
     enabled: selectedBomItemIds.length > 0,
   });
 
-  // Debug logging for process costs (development only)
+  // Production: Handle circuit breaker errors gracefully
   React.useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[Supplier Evaluation] Process costs query:', {
-        selectedBomItemIds,
-        processCostsData,
-        processCostsLoading,
-        processCostsError,
-        enabled: selectedBomItemIds.length > 0,
-      });
-
-      // Reset circuit breaker if it's open and we have multiple BOM items selected
-      if (processCostsError?.message?.includes('Circuit breaker is OPEN')) {
-        console.warn('[Supplier Evaluation] Circuit breaker is open, will reset automatically after timeout');
-      }
+    if (processCostsError?.message?.includes('Circuit breaker is OPEN')) {
+      // Circuit breaker will reset automatically after timeout
+      // No action needed in production
     }
-  }, [selectedBomItemIds, processCostsData, processCostsLoading, processCostsError]);
+  }, [processCostsError]);
 
 
 
@@ -218,12 +211,13 @@ export function NewEvaluationDialog({
       // Prepare evaluation group data for database
       const evaluationGroupData = {
         projectId,
-        name: `Evaluation ${new Date().toISOString().slice(0, 16)}`,
+        name: data.supplierGroupName,
         notes: data.notes,
         bomItems: sanitizedBomItemIds.map(bomItemId => {
           const item = bomItems.find(b => b.id === bomItemId);
           return {
             id: bomItemId,
+            bomId: data.bomId,
             name: item?.name || 'Unknown Part',
             partNumber: item?.partNumber || '',
             material: item?.material || '',
@@ -260,18 +254,27 @@ export function NewEvaluationDialog({
       toast.success('Supplier evaluation created! Opening supplier dashboard.');
 
       // Reset form and close dialog
-      form.reset();
+      form.reset({
+        supplierGroupName: '',
+        bomId: '',
+        bomItemIds: [],
+        processSelections: [],
+        notes: '',
+      });
       onOpenChange(false);
       onSuccess?.();
 
       // Navigate to supplier evaluation page
       router.push(`/projects/${projectId}/supplier-evaluation`);
     } catch (error) {
-      console.error('Error creating supplier evaluation:', error);
       toast.error('Failed to create supplier evaluation. Please try again.');
-
-      if (error instanceof Error && error.message.includes('UUID')) {
-        console.error('UUID validation failed:', error.message);
+      
+      // Log errors in development only
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error creating supplier evaluation:', error);
+        if (error instanceof Error && error.message.includes('UUID')) {
+          console.error('UUID validation failed:', error.message);
+        }
       }
     }
   };
@@ -341,7 +344,9 @@ export function NewEvaluationDialog({
 
       // The useProcessCosts hook should automatically refresh and show the new process
     } catch (error) {
-      console.error('Error creating process cost:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error creating process cost:', error);
+      }
     }
   };
 
@@ -350,8 +355,10 @@ export function NewEvaluationDialog({
       <DialogContent className="sm:max-w-[900px] max-h-[90vh] flex flex-col">
         <ErrorBoundary
           onError={(error, errorInfo) => {
-            console.error('[NewEvaluationDialog] Error:', error);
-            console.error('[NewEvaluationDialog] Error Info:', errorInfo);
+            if (process.env.NODE_ENV === 'development') {
+              console.error('[NewEvaluationDialog] Error:', error);
+              console.error('[NewEvaluationDialog] Error Info:', errorInfo);
+            }
           }}
         >
           <DialogHeader className="flex-shrink-0">
@@ -364,6 +371,28 @@ export function NewEvaluationDialog({
           <div className="flex-1 overflow-y-auto pr-2">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 py-4">
+                {/* Supplier Group Name */}
+                <FormField
+                  control={form.control}
+                  name="supplierGroupName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Supplier Group Name *</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Enter a name for this supplier evaluation group (e.g., 'Engine Block Suppliers', 'Q1 2026 Evaluation')"
+                          value={field.value || ''}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 {/* Grid Layout for Multi-Selection */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 

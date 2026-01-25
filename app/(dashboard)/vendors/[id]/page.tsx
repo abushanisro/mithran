@@ -143,6 +143,7 @@ export default function VendorDetailPage() {
       supplierCode: vendor.supplierCode,
       website: vendor.website,
       companyPhone: vendor.companyPhone,
+      companyEmail: vendor.companyEmail || '',
       addresses: vendor.addresses,
       city: vendor.city,
       state: vendor.state,
@@ -288,6 +289,10 @@ export default function VendorDetailPage() {
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">Phone</Label>
                     <p className="mt-1">{vendor.companyPhone || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Email</Label>
+                    <p className="mt-1">{vendor.companyEmail || 'N/A'}</p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">City</Label>
@@ -818,6 +823,16 @@ export default function VendorDetailPage() {
                   value={editForm.companyPhone || ''}
                   onChange={(e) => setEditForm({ ...editForm, companyPhone: e.target.value })}
                   placeholder="+1 234 567 8900"
+                />
+              </div>
+              <div>
+                <Label htmlFor="companyEmail">Company Email</Label>
+                <Input
+                  id="companyEmail"
+                  type="email"
+                  value={editForm.companyEmail || ''}
+                  onChange={(e) => setEditForm({ ...editForm, companyEmail: e.target.value })}
+                  placeholder="info@company.com"
                 />
               </div>
             </div>

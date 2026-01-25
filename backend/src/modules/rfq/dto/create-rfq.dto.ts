@@ -25,6 +25,16 @@ export class CreateRfqDto {
   })
   @IsArray()
   @IsUUID('4', { each: true })
+  @Transform(({ value }) => {
+    if (Array.isArray(value)) {
+      return value;
+    }
+    // Handle single string case by converting to array
+    if (typeof value === 'string') {
+      return [value];
+    }
+    return value;
+  })
   bomItemIds: string[];
 
   @ApiProperty({ 
@@ -33,6 +43,16 @@ export class CreateRfqDto {
   })
   @IsArray()
   @IsUUID('4', { each: true })
+  @Transform(({ value }) => {
+    if (Array.isArray(value)) {
+      return value;
+    }
+    // Handle single string case by converting to array
+    if (typeof value === 'string') {
+      return [value];
+    }
+    return value;
+  })
   vendorIds: string[];
 
   @ApiProperty({ description: 'Deadline for quote submission', required: false })
