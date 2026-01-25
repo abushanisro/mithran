@@ -138,6 +138,19 @@ export async function updateSupplierEvaluationGroup(
 }
 
 /**
+ * Validate if supplier evaluation group can be deleted
+ */
+export async function validateSupplierEvaluationGroupDeletion(groupId: string): Promise<{
+  canDelete: boolean;
+  warnings: string[];
+  blockers: string[];
+  impactSummary: Array<{ label: string; count: number }>;
+}> {
+  const response = await apiClient.get(`/supplier-evaluation-groups/${groupId}/validate-deletion`);
+  return response.data;
+}
+
+/**
  * Delete supplier evaluation group
  */
 export async function deleteSupplierEvaluationGroup(groupId: string): Promise<void> {

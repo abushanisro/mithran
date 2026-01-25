@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Search, Star, MapPin, Clock, Building2, Send, Package, Users, FileText, TrendingUp, Award, Mail, Globe, Phone, Box, Eye, ArrowLeft, X, Check, UserCheck } from 'lucide-react';
+import { Search, Star, MapPin, Clock, Building2, Send, Package, Users, FileText, TrendingUp, Award, Mail, Globe, Phone, Box, Eye, ArrowLeft, X, Check, UserCheck, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useVendors, Vendor } from '@/lib/api/hooks/useVendors';
 import { useCreateRfq, useSendRfq } from '@/lib/api/hooks/useRfq';
@@ -31,11 +31,12 @@ interface BOMPart {
 interface EvaluationGroupViewProps {
   projectId: string;
   bomParts: BOMPart[];
+  evaluationGroupName?: string;
   onViewFile?: (part: BOMPart, fileType: '2d' | '3d') => void;
   onBack?: () => void;
 }
 
-export function EvaluationGroupView({ projectId, bomParts, onViewFile, onBack }: EvaluationGroupViewProps) {
+export function EvaluationGroupView({ projectId, bomParts, evaluationGroupName, onViewFile, onBack }: EvaluationGroupViewProps) {
   // State declarations first
   const [selectedParts, setSelectedParts] = useState<string[]>([]);
   const [selectedVendors, setSelectedVendors] = useState<string[]>([]);
@@ -204,6 +205,20 @@ export function EvaluationGroupView({ projectId, bomParts, onViewFile, onBack }:
     }
   };
 
+  const handleDeleteEvaluationRfq = async (trackingId: string) => {
+    if (!confirm('Are you sure you want to delete this RFQ under evaluation?\n\nThis will permanently remove the RFQ tracking record and all evaluation data. This action cannot be undone.')) {
+      return;
+    }
+    
+    try {
+      await deleteTrackingMutation.mutateAsync(trackingId);
+      toast.success('RFQ evaluation deleted and removed from tracking');
+    } catch (error) {
+      console.error('Delete RFQ error:', error);
+      toast.error('Failed to delete RFQ evaluation. Please try again.');
+    }
+  };
+
   const handleApproveRfq = (trackingId: string, trackingVendors: any[]) => {
     setApproveModalOpen(trackingId);
     setSelectedApproveVendors(trackingVendors.map(v => v.id));
@@ -325,8 +340,15 @@ We look forward to your competitive proposal and establishing a successful partn
               </Button>
             )}
             <div>
-              <h1 className="text-2xl font-bold text-white">Supplier Evaluation</h1>
-              <p className="text-gray-300 mt-1">Select BOM parts to find and evaluate vendors</p>
+              <h1 className="text-2xl font-bold text-white">
+                {evaluationGroupName ? evaluationGroupName : 'Supplier Evaluation'}
+              </h1>
+              <p className="text-gray-300 mt-1">
+                {evaluationGroupName 
+                  ? 'Evaluate vendors and manage RFQs for this evaluation group'
+                  : 'Select BOM parts to find and evaluate vendors'
+                }
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -936,6 +958,20 @@ We look forward to your competitive proposal and establishing a successful partn
                               Approve
                             </Button>
                           </div>
+                        )}
+                        
+                        {/* Delete button for RFQs under evaluation */}
+                        {tracking.status === 'evaluated' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteEvaluationRfq(tracking.id)}
+                            disabled={deleteTrackingMutation.isPending}
+                            className="border-red-600 text-red-400 hover:bg-red-600/10 hover:text-red-300"
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            Delete
+                          </Button>
                         )}
                       </div>
                     </div>

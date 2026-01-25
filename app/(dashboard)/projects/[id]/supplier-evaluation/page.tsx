@@ -254,9 +254,12 @@ export default function SupplierEvaluationPage() {
 
   // Render based on current view - use clean block engine instead of stepped view
   if (currentView === 'evaluation' && selectedEvaluationGroupId) {
+    const selectedEvaluationGroup = evaluationGroups.find(group => group.id === selectedEvaluationGroupId);
+    
     return (
       <EvaluationGroupView
         projectId={projectId}
+        evaluationGroupName={selectedEvaluationGroup?.name}
         bomParts={transformedBomItems.map(item => {
           const bomItem = bomItems.find(bi => bi.id === item.id);
           return {

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { SupabaseService } from '../../common/supabase/supabase.service';
 import { Logger } from '../../common/logger/logger.service';
 import {
@@ -214,10 +214,136 @@ export class SupplierEvaluationGroupsService {
     }
   }
 
+  async validateDeletion(userId: string, groupId: string, accessToken: string): Promise<{
+    canDelete: boolean;
+    warnings: string[];
+    blockers: string[];
+    impactSummary: Array<{ label: string; count: number }>;
+  }> {
+    const warnings: string[] = [];
+    const blockers: string[] = [];
+    const impactSummary: Array<{ label: string; count: number }> = [];
+
+    try {
+      const supabase = this.supabaseService.getClient(accessToken);
+
+      // Get evaluation group details
+      const { data: group } = await supabase
+        .from('supplier_evaluation_groups')
+        .select('*')
+        .eq('id', groupId)
+        .eq('user_id', userId)
+        .single();
+
+      if (!group) {
+        blockers.push('Evaluation group not found');
+        return { canDelete: false, warnings, blockers, impactSummary };
+      }
+
+      // Check for active RFQs by looking at RFQ tracking records
+      const { data: activeRfqs, count: activeRfqCount } = await supabase
+        .from('rfq_tracking')
+        .select('*', { count: 'exact' })
+        .eq('project_id', group.project_id)
+        .in('status', ['sent', 'responses_received'])
+        .eq('user_id', userId);
+
+      if (activeRfqCount && activeRfqCount > 0) {
+        blockers.push(`${activeRfqCount} active RFQ(s) are currently sent to vendors. Cancel these RFQs first.`);
+      }
+
+      // Check for RFQs under evaluation
+      const { data: evaluatedRfqs, count: evaluatedCount } = await supabase
+        .from('rfq_tracking')
+        .select('*', { count: 'exact' })
+        .eq('project_id', group.project_id)
+        .eq('status', 'evaluated')
+        .eq('user_id', userId);
+
+      if (evaluatedCount && evaluatedCount > 0) {
+        warnings.push(`${evaluatedCount} RFQ(s) are currently under evaluation and will be lost.`);
+        impactSummary.push({ label: 'RFQs Under Evaluation', count: evaluatedCount });
+      }
+
+      // Check for completed RFQs (historical data)
+      const { data: completedRfqs, count: completedCount } = await supabase
+        .from('rfq_tracking')
+        .select('*', { count: 'exact' })
+        .eq('project_id', group.project_id)
+        .eq('status', 'completed')
+        .eq('user_id', userId);
+
+      if (completedCount && completedCount > 0) {
+        warnings.push('This evaluation contains completed RFQ data that may be valuable for future reference.');
+        impactSummary.push({ label: 'Completed RFQs', count: completedCount });
+      }
+
+      // Count related data that will be cascade deleted
+      const { count: bomItemsCount } = await supabase
+        .from('supplier_evaluation_group_bom_items')
+        .select('*', { count: 'exact' })
+        .eq('group_id', groupId);
+
+      if (bomItemsCount && bomItemsCount > 0) {
+        impactSummary.push({ label: 'BOM Items', count: bomItemsCount });
+      }
+
+      const { count: processesCount } = await supabase
+        .from('supplier_evaluation_group_processes')
+        .select('*', { count: 'exact' })
+        .eq('group_id', groupId);
+
+      if (processesCount && processesCount > 0) {
+        impactSummary.push({ label: 'Processes', count: processesCount });
+      }
+
+      // Check for vendor selections (from enhanced schema)
+      const { count: vendorSelectionsCount } = await supabase
+        .from('supplier_evaluation_vendor_selections')
+        .select('*', { count: 'exact' })
+        .eq('evaluation_group_id', groupId);
+
+      if (vendorSelectionsCount && vendorSelectionsCount > 0) {
+        impactSummary.push({ label: 'Vendor Selections', count: vendorSelectionsCount });
+      }
+
+      // Business logic warnings based on status
+      if (group.status === 'active') {
+        warnings.push('This is an active evaluation that may be in progress.');
+      }
+
+      if (group.status === 'completed') {
+        warnings.push('This completed evaluation contains historical data.');
+      }
+
+      return {
+        canDelete: blockers.length === 0,
+        warnings,
+        blockers,
+        impactSummary,
+      };
+    } catch (error) {
+      this.logger.error('Failed to validate deletion:', error);
+      return {
+        canDelete: false,
+        warnings: [],
+        blockers: ['Failed to validate deletion permissions'],
+        impactSummary: [],
+      };
+    }
+  }
+
   async remove(userId: string, groupId: string, accessToken: string): Promise<void> {
     this.logger.log(`Removing evaluation group ${groupId}`);
 
     try {
+      // Validate deletion is allowed
+      const validation = await this.validateDeletion(userId, groupId, accessToken);
+      
+      if (!validation.canDelete) {
+        throw new BadRequestException(`Cannot delete evaluation group: ${validation.blockers.join(', ')}`);
+      }
+
       const supabase = this.supabaseService.getClient(accessToken);
       const { error } = await supabase
         .from('supplier_evaluation_groups')
@@ -227,8 +353,10 @@ export class SupplierEvaluationGroupsService {
 
       if (error) {
         this.logger.error('Error removing evaluation group:', error);
-        throw new Error(`Failed to remove evaluation group: ${error.message}`);
+        throw new BadRequestException(`Failed to remove evaluation group: ${error.message}`);
       }
+
+      this.logger.log(`Successfully removed evaluation group ${groupId}`);
     } catch (error) {
       this.logger.error('Failed to remove evaluation group:', error);
       throw error;

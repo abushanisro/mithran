@@ -103,6 +103,38 @@ export class SupplierEvaluationGroupsController {
     return this.supplierEvaluationGroupsService.update(userId, id, updateDto, token);
   }
 
+  @Get(':id/validate-deletion')
+  @ApiOperation({ summary: 'Validate if evaluation group can be deleted' })
+  @ApiResponse({
+    status: 200,
+    description: 'Deletion validation result',
+    schema: {
+      type: 'object',
+      properties: {
+        canDelete: { type: 'boolean' },
+        warnings: { type: 'array', items: { type: 'string' } },
+        blockers: { type: 'array', items: { type: 'string' } },
+        impactSummary: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              label: { type: 'string' },
+              count: { type: 'number' }
+            }
+          }
+        }
+      }
+    }
+  })
+  validateDeletion(
+    @CurrentUser('id') userId: string,
+    @AccessToken() token: string,
+    @Param('id') id: string,
+  ) {
+    return this.supplierEvaluationGroupsService.validateDeletion(userId, id, token);
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Delete evaluation group' })
   @ApiResponse({

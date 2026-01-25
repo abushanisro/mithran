@@ -362,7 +362,21 @@ export class RfqTrackingService {
       throw new BadRequestException(`Failed to delete RFQ tracking: ${deleteError.message}`);
     }
 
-    this.logger.log(`RFQ tracking record deleted: ${trackingId}`);
+    // Verify the record was actually deleted
+    const { data: verificationResult, error: verifyError } = await client
+      .rpc('verify_rfq_tracking_deleted', { tracking_id: trackingId });
+
+    if (verifyError) {
+      this.logger.error(`Failed to verify deletion of RFQ tracking ${trackingId}: ${verifyError.message}`);
+      throw new BadRequestException(`Failed to verify deletion: ${verifyError.message}`);
+    }
+
+    if (!verificationResult) {
+      this.logger.error(`RFQ tracking record ${trackingId} still exists after delete operation`);
+      throw new BadRequestException(`Delete operation failed - record still exists`);
+    }
+
+    this.logger.log(`RFQ tracking record successfully deleted: ${trackingId}`);
   }
 
   /**

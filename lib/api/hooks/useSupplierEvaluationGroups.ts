@@ -6,6 +6,7 @@ import {
   getSupplierEvaluationGroup,
   updateSupplierEvaluationGroup,
   deleteSupplierEvaluationGroup,
+  validateSupplierEvaluationGroupDeletion,
   type SupplierEvaluationGroup,
   type SupplierEvaluationGroupSummary,
   type CreateSupplierEvaluationGroupData,
@@ -107,6 +108,15 @@ export function useUpdateSupplierEvaluationGroup() {
         queryKey: ['supplier-evaluation-groups', 'project', updatedGroup.projectId],
       });
     },
+  });
+}
+
+/**
+ * Validate deletion of supplier evaluation group
+ */
+export function useValidateSupplierEvaluationGroupDeletion() {
+  return useMutation({
+    mutationFn: (groupId: string) => validateSupplierEvaluationGroupDeletion(groupId),
   });
 }
 

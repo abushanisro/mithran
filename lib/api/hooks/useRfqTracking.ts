@@ -45,7 +45,8 @@ export function useRfqTrackingRecords(projectId?: string) {
     queryKey: rfqTrackingKeys.list(projectId),
     queryFn: async () => {
       try {
-        return await getRfqTrackingRecords(projectId);
+        const data = await getRfqTrackingRecords(projectId);
+        return data || [];
       } catch (error: any) {
         // Graceful degradation - return empty array for production
         if (error?.message?.includes('not found') || 
@@ -56,7 +57,7 @@ export function useRfqTrackingRecords(projectId?: string) {
         throw error;
       }
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes cache
+    staleTime: 2 * 60 * 1000,
     retry: (failureCount, error: any) => {
       // Don't retry database schema errors
       if (error?.message?.includes('not found') || 
@@ -323,7 +324,9 @@ export function useDeleteRfqTracking(projectId?: string) {
       // Remove specific tracking record from cache
       queryClient.removeQueries({ queryKey: rfqTrackingKeys.detail(trackingId) });
       
-      // No setTimeout or aggressive invalidations - data is already consistent
+      // Invalidate queries to fetch fresh server state
+      queryClient.invalidateQueries({ queryKey: rfqTrackingKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: rfqTrackingKeys.stats() });
     },
   });
 }

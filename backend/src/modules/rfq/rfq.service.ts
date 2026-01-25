@@ -349,7 +349,7 @@ export class RfqService {
     const { data, error } = await this.supabaseService
       .getClient(accessToken)
       .from('bom_items')
-      .select('id, part_number, description, process, quantity, file_2d_path, file_3d_path')
+      .select('id, name, part_number, description, item_type, quantity, file_3d_path, file_2d_path')
       .in('id', bomItemIds);
 
     if (error) {
@@ -362,14 +362,23 @@ export class RfqService {
       }));
     }
 
-    return data.map(item => ({
-      id: item.id,
-      partNumber: item.part_number,
-      description: item.description || 'No description',
-      process: item.process || 'No process specified',
-      quantity: item.quantity,
-      file2dPath: item.file_2d_path,
-      file3dPath: item.file_3d_path
-    }));
+    return data.map(item => {
+      // Map item_type to process
+      const processMapping = {
+        'assembly': 'Assembly',
+        'sub_assembly': 'Machining', 
+        'child_part': 'Casting'
+      };
+      
+      return {
+        id: item.id,
+        partNumber: item.part_number || item.name || 'Unknown Part',
+        description: item.description || item.name || 'No description available',
+        process: processMapping[item.item_type] || 'Manufacturing',
+        quantity: item.quantity || 1,
+        file2dPath: item.file_2d_path,
+        file3dPath: item.file_3d_path
+      };
+    });
   }
 }

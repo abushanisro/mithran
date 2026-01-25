@@ -188,13 +188,41 @@ function EvaluationCard({ group, onClick }: EvaluationCardProps) {
 
   const handleDeleteGroup = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const confirmDelete = window.confirm(`Are you sure you want to delete "${group.name || 'Unnamed Evaluation'}"? This action cannot be undone.`);
-    if (!confirmDelete) return;
-
+    
     setDeletingGroup(true);
     try {
-      // Import the delete function
-      const { deleteSupplierEvaluationGroup } = await import('@/lib/api/supplier-evaluation-groups');
+      // Import the validation and delete functions
+      const { validateSupplierEvaluationGroupDeletion, deleteSupplierEvaluationGroup } = await import('@/lib/api/supplier-evaluation-groups');
+      
+      // Validate deletion first
+      const validation = await validateSupplierEvaluationGroupDeletion(group.id);
+      
+      // Check if deletion is blocked
+      if (!validation.canDelete) {
+        toast.error('Cannot delete evaluation group: ' + validation.blockers.join(', '));
+        setDeletingGroup(false);
+        return;
+      }
+      
+      // Build confirmation message with warnings
+      let confirmMessage = `Are you sure you want to delete "${group.name || 'Unnamed Evaluation'}"?\n\nThis action cannot be undone.`;
+      
+      if (validation.warnings.length > 0) {
+        confirmMessage += '\n\nWarnings:\n' + validation.warnings.map(w => `• ${w}`).join('\n');
+      }
+      
+      if (validation.impactSummary.length > 0) {
+        confirmMessage += '\n\nThe following will be permanently deleted:\n' + 
+          validation.impactSummary.map(i => `• ${i.count} ${i.label}`).join('\n');
+      }
+      
+      const confirmed = window.confirm(confirmMessage);
+      
+      if (!confirmed) {
+        setDeletingGroup(false);
+        return;
+      }
+
       await deleteSupplierEvaluationGroup(group.id);
       
       // Refresh the list
