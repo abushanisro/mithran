@@ -15,8 +15,7 @@ import {
   Factory,
   Zap,
   Edit2,
-  Trash2,
-  MoreHorizontal
+  Trash2
 } from 'lucide-react';
 import { useSupplierNominations, useDeleteSupplierNomination } from '@/lib/api/hooks/useSupplierNominations';
 import {
@@ -29,7 +28,6 @@ import {
 } from '@/lib/api/supplier-nominations';
 import { CreateNominationDialog } from './CreateNominationDialog';
 import { EditNominationDialog } from './EditNominationDialog';
-import { MultiSupplierEvaluationView } from './MultiSupplierEvaluationView';
 
 interface SupplierNominationsDashboardProps {
   projectId: string;
@@ -47,9 +45,9 @@ export function SupplierNominationsDashboard({
   const [selectedType, setSelectedType] = useState<NominationType | 'all'>('all');
   const [editingNomination, setEditingNomination] = useState<SupplierNominationSummary | null>(null);
 
-  const { data: rawNominations = [], isLoading, error } = useSupplierNominations(projectId);
+  const { data: rawNominations = [], isLoading } = useSupplierNominations(projectId) as { data: SupplierNominationSummary[], isLoading: boolean };
   const deleteNominationMutation = useDeleteSupplierNomination();
-  
+
   // Deduplicate nominations by ID to fix any cache issues
   const nominations = React.useMemo(() => {
     const seen = new Set();
