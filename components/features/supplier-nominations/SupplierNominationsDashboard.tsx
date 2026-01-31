@@ -17,9 +17,11 @@ import {
   Zap,
   Edit2,
   Trash2,
-  ArrowLeft
+  ArrowLeft,
+  Package
 } from 'lucide-react';
 import { useSupplierNominations, useDeleteSupplierNomination } from '@/lib/api/hooks/useSupplierNominations';
+import { useBOMs } from '@/lib/api/hooks/useBOM';
 import {
   getStatusColor,
   getStatusText,
@@ -30,31 +32,39 @@ import {
 } from '@/lib/api/supplier-nominations';
 import { CreateNominationDialog } from './CreateNominationDialog';
 import { EditNominationDialog } from './EditNominationDialog';
+import { BomPartNominationDialog } from './BomPartNominationDialog';
 
 interface SupplierNominationsDashboardProps {
   projectId: string;
   evaluationGroupId?: string;
+  selectedBomId?: string;
   onSelectNomination?: (nominationId: string) => void;
 }
 
 export function SupplierNominationsDashboard({
   projectId,
   evaluationGroupId,
+  selectedBomId,
   onSelectNomination,
 }: SupplierNominationsDashboardProps) {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [bomPartDialogOpen, setBomPartDialogOpen] = useState(false);
   const [selectedType, setSelectedType] = useState<NominationType | 'all'>('all');
   const [editingNomination, setEditingNomination] = useState<SupplierNominationSummary | null>(null);
 
   const { data: rawNominations = [], isLoading } = useSupplierNominations(projectId) as { data: SupplierNominationSummary[], isLoading: boolean };
   const deleteNominationMutation = useDeleteSupplierNomination();
 
+  // Fetch BOMs for the project for BOM selection
+  const { data: bomsData } = useBOMs({ projectId });
+  const boms = bomsData?.boms || [];
+
   // Deduplicate nominations by ID to fix any cache issues
   const nominations = React.useMemo(() => {
     const seen = new Set();
-    return rawNominations.filter(nomination => {
+    return rawNominations.filter((nomination: SupplierNominationSummary) => {
       if (seen.has(nomination.id)) {
         return false;
       }
@@ -64,7 +74,7 @@ export function SupplierNominationsDashboard({
   }, [rawNominations]);
 
   // Filter nominations
-  const filteredNominations = nominations.filter(nomination => {
+  const filteredNominations = nominations.filter((nomination: SupplierNominationSummary) => {
     const matchesSearch = nomination.nominationName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = selectedType === 'all' || nomination.nominationType === selectedType;
     return matchesSearch && matchesType;
@@ -78,7 +88,7 @@ export function SupplierNominationsDashboard({
     hybrid: nominations.filter(n => n.nominationType === NominationType.HYBRID).length,
     completed: nominations.filter(n => n.status === NominationStatus.COMPLETED || n.status === NominationStatus.APPROVED).length,
     inProgress: nominations.filter(n => n.status === NominationStatus.IN_PROGRESS).length,
-    totalVendors: nominations.reduce((sum, n) => sum + n.vendorCount, 0)
+    totalVendors: nominations.reduce((sum: number, n: SupplierNominationSummary) => sum + n.vendorCount, 0)
   };
 
   const handleCreateSuccess = (nominationId: string) => {
@@ -145,16 +155,42 @@ export function SupplierNominationsDashboard({
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Button
-              onClick={() => setCreateDialogOpen(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              New Nomination
-            </Button>
-          </div>
+          <Button
+            onClick={() => setCreateDialogOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Create Nomination
+          </Button>
         </div>
+
+
+        {/* Currently Selected BOM Info */}
+        {selectedBomId && (
+          <Card className="bg-gray-800 border-gray-700 border-l-4 border-l-blue-500">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Package className="h-5 w-5 text-blue-400" />
+                  <div>
+                    <h4 className="font-medium text-white">
+                      BOM Selected: {boms.find(b => b.id === selectedBomId)?.name || 'Unknown BOM'}
+                    </h4>
+                    <p className="text-sm text-gray-400">Ready for part-wise nominations</p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.location.href = window.location.pathname}
+                  className="border-gray-600 text-gray-300 hover:bg-gray-700"
+                >
+                  Clear Selection
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Stats Overview */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
@@ -263,13 +299,24 @@ export function SupplierNominationsDashboard({
               <div className="text-gray-400 mb-4">
                 {searchTerm || selectedType !== 'all' ? 'No nominations match your filters' : 'No supplier nominations found'}
               </div>
-              <Button
-                onClick={() => setCreateDialogOpen(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create Your First Nomination
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => setBomPartDialogOpen(true)}
+                  variant="outline"
+                  disabled={!selectedBomId}
+                  className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white"
+                >
+                  <Package className="h-4 w-4 mr-2" />
+                  BOM Part Nomination
+                </Button>
+                <Button
+                  onClick={() => setCreateDialogOpen(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Quick Nomination
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ) : (
@@ -298,6 +345,11 @@ export function SupplierNominationsDashboard({
                           <Badge variant="secondary" className="text-xs">
                             {getNominationTypeLabel(nomination.nominationType)}
                           </Badge>
+                          {nomination.bomPartsCount && nomination.bomPartsCount > 0 && (
+                            <Badge variant="outline" className="text-xs border-blue-500 text-blue-400 bg-blue-900/20">
+                              BOM-Based
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -346,6 +398,17 @@ export function SupplierNominationsDashboard({
                     <span className="text-white font-medium">{nomination.vendorCount}</span>
                   </div>
 
+                  {/* BOM Parts Count (if applicable) */}
+                  {nomination.bomPartsCount && nomination.bomPartsCount > 0 && (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-gray-400">
+                        <Package className="h-4 w-4" />
+                        <span className="text-sm">BOM Parts</span>
+                      </div>
+                      <span className="text-white font-medium">{nomination.bomPartsCount}</span>
+                    </div>
+                  )}
+
                   {/* Created Date */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-gray-400">
@@ -368,6 +431,15 @@ export function SupplierNominationsDashboard({
           onOpenChange={setCreateDialogOpen}
           projectId={projectId}
           evaluationGroupId={evaluationGroupId}
+          onSuccess={handleCreateSuccess}
+        />
+
+        {/* BOM Part Nomination Dialog */}
+        <BomPartNominationDialog
+          open={bomPartDialogOpen}
+          onOpenChange={setBomPartDialogOpen}
+          projectId={projectId}
+          selectedBomId={selectedBomId}
           onSuccess={handleCreateSuccess}
         />
 

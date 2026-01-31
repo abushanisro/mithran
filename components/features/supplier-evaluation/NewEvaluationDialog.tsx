@@ -157,6 +157,7 @@ export function NewEvaluationDialog({
             quantity: item?.quantity || 1
           };
         }),
+        processes: [], // Empty array since process search was removed
       };
 
       // Create evaluation group in database

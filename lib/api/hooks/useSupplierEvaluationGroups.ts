@@ -26,6 +26,8 @@ export function useAllSupplierEvaluationGroups() {
     queryKey: ['supplier-evaluation-groups', 'all'],
     queryFn: () => getAllSupplierEvaluationGroups(),
     staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
+    retryDelay: 1000,
   });
 }
 

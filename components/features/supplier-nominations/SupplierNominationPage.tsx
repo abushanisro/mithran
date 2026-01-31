@@ -18,6 +18,7 @@ import {
 import { toast } from 'sonner';
 import { 
   useSupplierNomination,
+  useSupplierNominations,
   useUpdateVendorEvaluation,
   useUpdateEvaluationScores,
   useCompleteSupplierNomination
@@ -33,7 +34,64 @@ import {
   type VendorEvaluation,
   type NominationCriteria
 } from '@/lib/api/supplier-nominations';
-import { MultiSupplierEvaluationView } from './MultiSupplierEvaluationView';
+
+// Helper functions for score calculation
+const getCostScore = (evaluation: VendorEvaluation): number => {
+  // Cost Competancy is derived from cost-related criteria scores
+  const costCriteria = evaluation.scores.filter(score => 
+    score.criteriaId.toLowerCase().includes('cost') || 
+    score.criteriaId.toLowerCase().includes('price') ||
+    score.criteriaId.toLowerCase().includes('budget')
+  );
+  
+  if (costCriteria.length === 0) return evaluation.capabilityPercentage || 0;
+  
+  const totalCostScore = costCriteria.reduce((sum, score) => 
+    sum + (score.score / score.maxPossibleScore) * 100, 0
+  );
+  return totalCostScore / costCriteria.length;
+};
+
+const getVendorRatingScore = (evaluation: VendorEvaluation): number => {
+  // Vendor Rating is derived from risk mitigation and vendor quality criteria
+  const vendorCriteria = evaluation.scores.filter(score => 
+    score.criteriaId.toLowerCase().includes('vendor') || 
+    score.criteriaId.toLowerCase().includes('quality') ||
+    score.criteriaId.toLowerCase().includes('rating')
+  );
+  
+  if (vendorCriteria.length === 0) return evaluation.riskMitigationPercentage || 0;
+  
+  const totalVendorScore = vendorCriteria.reduce((sum, score) => 
+    sum + (score.score / score.maxPossibleScore) * 100, 0
+  );
+  return totalVendorScore / vendorCriteria.length;
+};
+
+const getCapabilityScore = (evaluation: VendorEvaluation): number => {
+  // Capability Score is derived from technical and capability criteria
+  const capabilityCriteria = evaluation.scores.filter(score => 
+    score.criteriaId.toLowerCase().includes('capability') || 
+    score.criteriaId.toLowerCase().includes('technical') ||
+    score.criteriaId.toLowerCase().includes('feasibility')
+  );
+  
+  if (capabilityCriteria.length === 0) return evaluation.technicalFeasibilityScore || 0;
+  
+  const totalCapabilityScore = capabilityCriteria.reduce((sum, score) => 
+    sum + (score.score / score.maxPossibleScore) * 100, 0
+  );
+  return totalCapabilityScore / capabilityCriteria.length;
+};
+
+const calculateOverallScore = (evaluation: VendorEvaluation, costWeight: number = 70, vendorWeight: number = 20, capabilityWeight: number = 10): number => {
+  const costScore = getCostScore(evaluation);
+  const vendorScore = getVendorRatingScore(evaluation);
+  const capabilityScore = getCapabilityScore(evaluation);
+  
+  // Convert percentages to decimals
+  return (costScore * (costWeight / 100)) + (vendorScore * (vendorWeight / 100)) + (capabilityScore * (capabilityWeight / 100));
+};
 
 // Circular Progress Component
 interface CircularProgressProps {
@@ -112,6 +170,11 @@ interface SupplierCardProps {
   onUpdate: (evaluationId: string, data: any) => void;
   onUpdateScores: (evaluationId: string, scores: any[]) => void;
   onSelectEvaluation?: (evaluationId: string) => void;
+  weights: {
+    costWeight: number;
+    vendorWeight: number;
+    capabilityWeight: number;
+  };
 }
 
 function SupplierCard({ 
@@ -119,7 +182,8 @@ function SupplierCard({
   criteria, 
   vendor, 
   rank,
-  onSelectEvaluation
+  onSelectEvaluation,
+  weights
 }: SupplierCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -165,20 +229,17 @@ function SupplierCard({
                     {evaluation.recommendation?.replace('_', ' ').toUpperCase() || 'PENDING'}
                   </span>
                 </Badge>
-                <Badge variant="secondary" className="text-xs">
-                  {evaluation.vendorType.toUpperCase()}
-                </Badge>
               </div>
             </div>
           </div>
           
           <CircularProgress 
-            value={evaluation.overallScore}
+            value={calculateOverallScore(evaluation, weights.costWeight, weights.vendorWeight, weights.capabilityWeight)}
             size={80}
             strokeWidth={6}
           >
             <span className="text-lg font-bold text-white">
-              {evaluation.overallScore.toFixed(0)}
+              {calculateOverallScore(evaluation, weights.costWeight, weights.vendorWeight, weights.capabilityWeight).toFixed(0)}
             </span>
             <span className="text-xs text-gray-400">Score</span>
           </CircularProgress>
@@ -190,19 +251,19 @@ function SupplierCard({
         <div className="grid grid-cols-3 gap-4">
           <div className="text-center">
             <div className="text-lg font-semibold text-white">
-              {evaluation.capabilityPercentage.toFixed(0)}%
+              {getCostScore(evaluation).toFixed(0)}%
             </div>
             <div className="text-xs text-gray-400">Cost Competancy 70%</div>
           </div>
           <div className="text-center">
             <div className="text-lg font-semibold text-white">
-              {evaluation.riskMitigationPercentage.toFixed(0)}%
+              {getVendorRatingScore(evaluation).toFixed(0)}%
             </div>
             <div className="text-xs text-gray-400">Vendor Rating 20%</div>
           </div>
           <div className="text-center">
             <div className="text-lg font-semibold text-white">
-              {evaluation.technicalFeasibilityScore.toFixed(0)}%
+              {getCapabilityScore(evaluation).toFixed(0)}%
             </div>
             <div className="text-xs text-gray-400">Capability score 10%</div>
           </div>
@@ -256,14 +317,16 @@ function SupplierCard({
               <div className="space-y-2">
                 {criteria.map((criterion) => {
                   const score = evaluation.scores.find(s => s.criteriaId === criterion.id);
-                  const percentage = score ? (score.score / score.maxPossibleScore) * 100 : 0;
+                  const actualScore = score?.score || 0;
+                  const maxScore = score?.maxPossibleScore || criterion.maxScore || 100;
+                  const percentage = maxScore > 0 ? (actualScore / maxScore) * 100 : 0;
                   
                   return (
                     <div key={criterion.id} className="space-y-1">
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-300">{criterion.criteriaName}</span>
                         <span className="text-white font-medium">
-                          {score?.score.toFixed(0) || 0} / {criterion.maxScore}
+                          {actualScore.toFixed(0)} / {maxScore}
                         </span>
                       </div>
                       <Progress 
@@ -315,9 +378,20 @@ export function SupplierNominationPage({
   onBack,
   onSelectEvaluation
 }: SupplierNominationPageProps) {
-  const { data: nomination, isLoading } = useSupplierNomination(nominationId);
+  const { data: nomination, isLoading, error } = useSupplierNomination(nominationId);
   const vendorsQuery = useMemo(() => ({ status: 'active' as const, limit: 1000 }), []);
   const { data: vendorsResponse } = useVendors(vendorsQuery);
+  
+  // Default weights for overall scoring
+  const [weights] = useState({
+    costWeight: 70,
+    vendorWeight: 20,
+    capabilityWeight: 10
+  });
+  
+  // Fetch all nominations for the same project to get group-level BOM parts
+  // Only fetch if nomination is loaded and has a projectId
+  const { data: allNominations } = useSupplierNominations(nomination?.projectId || '');
   
   const updateEvaluationMutation = useUpdateVendorEvaluation(nominationId);
   const updateScoresMutation = useUpdateEvaluationScores(nominationId);
@@ -330,11 +404,26 @@ export function SupplierNominationPage({
     return new Map(vendors.map(vendor => [vendor.id, vendor]));
   }, [vendors]);
 
+  // For now, show BOM parts from current nomination only
+  // TODO: Implement group-level BOM parts aggregation when full nomination details are available
+  const groupBomParts = useMemo(() => {
+    if (!nomination?.bomParts) return [];
+    
+    return nomination.bomParts.map(part => ({
+      ...part,
+      nominationName: nomination.nominationName,
+      nominationId: nomination.id
+    }));
+  }, [nomination]);
+
   // Sort evaluations by overall score (descending)
   const sortedEvaluations = useMemo(() => {
     if (!nomination?.vendorEvaluations) return [];
-    return [...nomination.vendorEvaluations].sort((a, b) => b.overallScore - a.overallScore);
-  }, [nomination?.vendorEvaluations]);
+    return [...nomination.vendorEvaluations].sort((a, b) => 
+      calculateOverallScore(b, weights.costWeight, weights.vendorWeight, weights.capabilityWeight) - 
+      calculateOverallScore(a, weights.costWeight, weights.vendorWeight, weights.capabilityWeight)
+    );
+  }, [nomination?.vendorEvaluations, weights]);
 
   // Calculate summary statistics
   const summaryStats = useMemo(() => {
@@ -342,7 +431,9 @@ export function SupplierNominationPage({
 
     const evaluations = nomination.vendorEvaluations;
     const totalVendors = evaluations.length;
-    const avgScore = evaluations.reduce((sum, evaluation) => sum + evaluation.overallScore, 0) / totalVendors;
+    const avgScore = evaluations.reduce((sum, evaluation) => 
+      sum + calculateOverallScore(evaluation, weights.costWeight, weights.vendorWeight, weights.capabilityWeight), 0
+    ) / totalVendors;
     
     const approved = evaluations.filter(e => e.recommendation === Recommendation.APPROVED).length;
     const conditional = evaluations.filter(e => e.recommendation === Recommendation.CONDITIONAL).length;
@@ -356,7 +447,7 @@ export function SupplierNominationPage({
       rejected,
       pending: totalVendors - approved - conditional - rejected
     };
-  }, [nomination?.vendorEvaluations]);
+  }, [nomination?.vendorEvaluations, weights]);
 
   const handleUpdateEvaluation = async (evaluationId: string, data: any) => {
     try {
@@ -397,6 +488,40 @@ export function SupplierNominationPage({
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-center h-64">
             <div className="text-white">Loading nomination...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-900 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col items-center justify-center h-64 space-y-4">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-8 w-8 text-red-400" />
+              <div className="text-xl font-semibold text-white">
+                Nomination Not Found
+              </div>
+            </div>
+            <div className="text-gray-400 text-center max-w-md">
+              The supplier nomination with ID "{nominationId}" could not be found. 
+              It may have been deleted or you may not have permission to view it.
+            </div>
+            {onBack && (
+              <Button
+                variant="outline"
+                onClick={onBack}
+                className="mt-4 border-gray-600 text-gray-300 hover:bg-gray-800"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Go Back
+              </Button>
+            )}
+            <div className="text-sm text-gray-500 mt-2">
+              Error: {error?.message || 'Unknown error occurred'}
+            </div>
           </div>
         </div>
       </div>
@@ -472,6 +597,116 @@ export function SupplierNominationPage({
           </div>
         </div>
 
+        {/* BOM Details Section - Group Level */}
+        {groupBomParts && groupBomParts.length > 0 && (
+          <Card className="bg-gray-800 border-gray-700">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <DollarSign className="h-5 w-5" />
+                Selected BOM Parts ({groupBomParts.length} {groupBomParts.length === 1 ? 'Part' : 'Parts'})
+              </CardTitle>
+              {nomination.evaluationGroupId && (
+                <div className="text-sm text-gray-400">
+                  Evaluation Group: {nomination.evaluationGroupId}
+                </div>
+              )}
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {groupBomParts.map((bomPart, index) => (
+                  <div key={bomPart.bomItemId} className={`${index > 0 ? 'pt-6 border-t border-gray-700' : ''}`}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h3 className="text-lg font-semibold text-white">
+                          {bomPart.bomItemName}
+                        </h3>
+                        <div className="text-sm text-gray-400 mt-1">
+                          From: {bomPart.nominationName}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="text-xs">
+                          {bomPart.vendorIds.length} vendor{bomPart.vendorIds.length !== 1 ? 's' : ''} assigned
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          Part #{index + 1}
+                        </Badge>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">
+                          BOM Item Name
+                        </label>
+                        <div className="text-white font-medium">
+                          {bomPart.bomItemName}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          ID: {bomPart.bomItemId.slice(-8)}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">
+                          Part Number
+                        </label>
+                        <div className="text-white font-medium">
+                          {bomPart.partNumber || 'Not specified'}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">
+                          Material
+                        </label>
+                        <div className="text-white font-medium">
+                          {bomPart.material || 'Not specified'}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">
+                          Quantity Required
+                        </label>
+                        <div className="text-white font-medium">
+                          {bomPart.quantity.toLocaleString()} units
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {bomPart.vendorIds.length > 0 && (
+                      <div className="mt-3">
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          Assigned Vendors
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {bomPart.vendorIds.map((vendorId) => {
+                            const vendor = vendorMap.get(vendorId);
+                            return (
+                              <Badge key={vendorId} variant="outline" className="text-xs">
+                                {vendor?.name || `Vendor ${vendorId.slice(-4)}`}
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              
+              {nomination.description && (
+                <div className="mt-6 pt-6 border-t border-gray-700">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Nomination Description
+                  </label>
+                  <div className="text-gray-300 text-sm">
+                    {nomination.description}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Summary Statistics */}
         {summaryStats && (
           <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
@@ -533,6 +768,7 @@ export function SupplierNominationPage({
                 onUpdate={handleUpdateEvaluation}
                 onUpdateScores={handleUpdateScores}
                 onSelectEvaluation={onSelectEvaluation}
+                weights={weights}
               />
             ))}
           </div>

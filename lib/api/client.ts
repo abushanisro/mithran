@@ -763,7 +763,11 @@ class ApiClient {
           }
 
           if (silent) return null;
-          throw new ApiError(`Network error - please check your connection to ${url}`, 0, 'NETWORK_ERROR');
+          const isLocalhost = url.includes('localhost') || url.includes('127.0.0.1');
+          const errorMessage = isLocalhost 
+            ? 'Backend server is not running. Please start the backend server with "npm run start:dev" in the backend directory.'
+            : `Network error - please check your connection to ${url}`;
+          throw new ApiError(errorMessage, 0, 'NETWORK_ERROR');
         }
 
         // Silent mode: return null for all other error types

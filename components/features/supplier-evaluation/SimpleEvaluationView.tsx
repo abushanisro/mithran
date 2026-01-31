@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { ArrowLeft, Search, MapPin, Send, Edit, Trash2, Loader2, Box, Package, Settings, Plus, CheckCircle2, Circle, Clock, Mail, Phone, ChevronRight, TrendingUp, Users, FileCheck, Star } from 'lucide-react';
+import { ArrowLeft, Search, MapPin, Send, Edit, Trash2, Loader2, Box, Package, CheckCircle2, Circle, Clock, Mail, Phone, ChevronRight, Users, FileCheck, Star } from 'lucide-react';
 import { useVendors } from '@/lib/api/hooks/useVendors';
 import { useSupplierEvaluationGroup, useUpdateSupplierEvaluationGroup } from '@/lib/api/hooks/useSupplierEvaluationGroups';
 import { BOMItemDialog } from '@/components/features/bom/BOMItemDialog';
@@ -49,7 +49,7 @@ export function SimpleEvaluationView({ groupId, onBack }: SimpleEvaluationViewPr
   // Edit/Delete state
   const [editingItem, setEditingItem] = useState<any>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
+
 
   // Process planning state
   const [addingProcessItem, setAddingProcessItem] = useState<any>(null);
@@ -168,8 +168,6 @@ export function SimpleEvaluationView({ groupId, onBack }: SimpleEvaluationViewPr
     const confirmDelete = window.confirm('Are you sure you want to remove this part from the evaluation?');
     if (!confirmDelete) return;
 
-    setDeletingItemId(itemId);
-
     try {
       // Type-safe item filtering
       const updatedBomItems = Array.isArray(group.bomItems)
@@ -200,58 +198,14 @@ export function SimpleEvaluationView({ groupId, onBack }: SimpleEvaluationViewPr
 
       const errorMessage = error?.message || 'Unknown error occurred';
       toast.error(`Failed to remove part: ${errorMessage}`);
-    } finally {
-      setDeletingItemId(null);
     }
   }, [group, groupId, updateGroupMutation]);
-
-  const handleAddProcess = (item: any) => {
-    setAddingProcessItem(item);
-    setProcessDialogOpen(true);
-  };
 
   const handleProcessSuccess = () => {
     setProcessDialogOpen(false);
     setAddingProcessItem(null);
     toast.success('Process added successfully');
-    // The process costs will automatically refetch due to the query
   };
-
-  // Header Stats for Overview
-  const stats = useMemo(() => ([
-    {
-      label: 'Total Parts',
-      value: group?.bomItems?.length || 0,
-      sub: 'From active BOM',
-      icon: Package,
-      color: 'text-teal-400',
-      bg: 'bg-teal-400/10'
-    },
-    {
-      label: 'Active Vendors',
-      value: vendors.length,
-      sub: '+2 this month',
-      icon: Users,
-      color: 'text-blue-400',
-      bg: 'bg-blue-400/10'
-    },
-    {
-      label: 'Pending RFQs',
-      value: 12,
-      sub: '5 responses received',
-      icon: FileCheck,
-      color: 'text-amber-400',
-      bg: 'bg-amber-400/10'
-    },
-    {
-      label: 'Avg. Rating',
-      value: '4.5',
-      sub: '+0.3 vs last quarter',
-      icon: Star,
-      color: 'text-emerald-400',
-      bg: 'bg-emerald-400/10'
-    }
-  ]), [group?.bomItems?.length, vendors.length]);
 
   // Memoized BOM items table for rendering
   const renderedBomItems = useMemo(() => {

@@ -50,9 +50,8 @@ export default function SupplierEvaluationPage() {
   }, []);
 
   const handleEvaluationSuccess = useCallback(() => {
-    // Reset forms and go back to dashboard
-    setSelectedItems([]);
-    setGroupName('');
+    // Close dialog and stay on dashboard
+    setNewEvaluationDialogOpen(false);
     setCurrentView('dashboard');
   }, []);
 

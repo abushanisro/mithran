@@ -36,6 +36,36 @@ export enum RiskLevel {
   CRITICAL = 'critical'
 }
 
+export class BomPartDto {
+  @ApiProperty()
+  @IsUUID()
+  bomItemId: string;
+
+  @ApiProperty()
+  @IsString()
+  bomItemName: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  partNumber?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  material?: string;
+
+  @ApiProperty()
+  @IsNumber()
+  @Min(0)
+  quantity: number;
+
+  @ApiProperty()
+  @IsArray()
+  @IsString({ each: true })
+  vendorIds: string[];
+}
+
 export class CreateSupplierNominationDto {
   @ApiProperty()
   @IsString()
@@ -69,6 +99,13 @@ export class CreateSupplierNominationDto {
   @IsArray()
   @IsString({ each: true })
   vendorIds?: string[];
+
+  @ApiPropertyOptional({ type: [BomPartDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => BomPartDto)
+  bomParts?: BomPartDto[];
 }
 
 export class CreateCriteriaDto {
@@ -320,6 +357,9 @@ export class SupplierNominationDto {
   @ApiProperty({ type: [VendorEvaluationDto] })
   vendorEvaluations: VendorEvaluationDto[];
 
+  @ApiPropertyOptional({ type: [BomPartDto] })
+  bomParts?: BomPartDto[];
+
   @ApiProperty()
   createdAt: Date;
 
@@ -354,6 +394,9 @@ export class SupplierNominationSummaryDto {
 
   @ApiProperty()
   completionPercentage: number;
+
+  @ApiPropertyOptional()
+  bomPartsCount?: number;
 
   @ApiProperty()
   createdAt: Date;

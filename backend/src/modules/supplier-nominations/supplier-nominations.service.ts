@@ -3,6 +3,7 @@ import { SupabaseService } from '../../common/supabase/supabase.service';
 import { Logger } from '../../common/logger/logger.service';
 import {
   CreateSupplierNominationDto,
+  BomPartDto,
   CreateCriteriaDto,
   UpdateVendorEvaluationDto,
   CreateEvaluationScoreDto,
@@ -69,6 +70,16 @@ export class SupplierNominationsService {
         // Continue without criteria initialization
       }
 
+      // Create BOM parts if provided
+      if (createDto.bomParts && createDto.bomParts.length > 0) {
+        try {
+          await this.createBomParts(nomination.id, createDto.bomParts, accessToken);
+        } catch (bomError) {
+          this.logger.warn(`Failed to create BOM parts: ${bomError.message}`);
+          // Continue without BOM parts for now
+        }
+      }
+
       // Create vendor evaluations if vendor IDs provided
       if (createDto.vendorIds && createDto.vendorIds.length > 0) {
         try {
@@ -91,6 +102,7 @@ export class SupplierNominationsService {
         rfqTrackingId: nomination.rfq_tracking_id,
         criteria: [],
         vendorEvaluations: [],
+        bomParts: [],
         createdAt: nomination.created_at,
         updatedAt: nomination.updated_at,
         completedAt: nomination.completed_at,
@@ -121,6 +133,9 @@ export class SupplierNominationsService {
           created_at,
           vendor_nomination_evaluations (
             count
+          ),
+          supplier_nomination_bom_parts (
+            count
           )
         `)
         .eq('user_id', userId)
@@ -138,6 +153,7 @@ export class SupplierNominationsService {
         status: nomination.status,
         vendorCount: nomination.vendor_nomination_evaluations?.length || 0,
         completionPercentage: this.calculateCompletionPercentage(nomination),
+        bomPartsCount: nomination.supplier_nomination_bom_parts?.length || 0,
         createdAt: new Date(nomination.created_at)
       }));
     } catch (error) {
@@ -163,6 +179,10 @@ export class SupplierNominationsService {
           vendor_nomination_evaluations (
             *,
             vendor_evaluation_scores (*)
+          ),
+          supplier_nomination_bom_parts (
+            *,
+            supplier_nomination_bom_part_vendors (*)
           )
         `)
         .eq('id', nominationId)
@@ -568,6 +588,7 @@ export class SupplierNominationsService {
       status: data.status,
       criteria: (data.nomination_evaluation_criteria || []).map((criteria: any) => this.mapToCriteriaDto(criteria)),
       vendorEvaluations: (data.vendor_nomination_evaluations || []).map((evaluation: any) => this.mapToVendorEvaluationDto(evaluation)),
+      bomParts: (data.supplier_nomination_bom_parts || []).map((bomPart: any) => this.mapToBomPartDto(bomPart)),
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at),
       completedAt: data.completed_at ? new Date(data.completed_at) : undefined,
@@ -622,5 +643,62 @@ export class SupplierNominationsService {
       assessorNotes: data.assessor_notes,
       assessedAt: new Date(data.assessed_at)
     };
+  }
+
+  private mapToBomPartDto(data: any): BomPartDto {
+    const vendorIds = (data.supplier_nomination_bom_part_vendors || []).map((v: any) => v.vendor_id);
+    
+    return {
+      bomItemId: data.bom_item_id,
+      bomItemName: data.bom_item_name,
+      partNumber: data.part_number,
+      material: data.material,
+      quantity: data.quantity,
+      vendorIds: vendorIds
+    };
+  }
+
+  private async createBomParts(
+    nominationId: string,
+    bomParts: any[],
+    accessToken: string
+  ): Promise<void> {
+    const client = this.supabaseService.getClient(accessToken);
+
+    for (const bomPart of bomParts) {
+      // Create BOM part record
+      const { data: bomPartRecord, error: bomPartError } = await client
+        .from('supplier_nomination_bom_parts')
+        .insert({
+          nomination_evaluation_id: nominationId,
+          bom_item_id: bomPart.bomItemId,
+          bom_item_name: bomPart.bomItemName,
+          part_number: bomPart.partNumber,
+          material: bomPart.material,
+          quantity: bomPart.quantity
+        })
+        .select()
+        .single();
+
+      if (bomPartError) {
+        throw new BadRequestException(`Failed to create BOM part: ${bomPartError.message}`);
+      }
+
+      // Create vendor assignments for this BOM part
+      if (bomPart.vendorIds && bomPart.vendorIds.length > 0) {
+        const vendorAssignments = bomPart.vendorIds.map((vendorId: string) => ({
+          nomination_bom_part_id: bomPartRecord.id,
+          vendor_id: vendorId
+        }));
+
+        const { error: vendorError } = await client
+          .from('supplier_nomination_bom_part_vendors')
+          .insert(vendorAssignments);
+
+        if (vendorError) {
+          throw new BadRequestException(`Failed to assign vendors to BOM part: ${vendorError.message}`);
+        }
+      }
+    }
   }
 }

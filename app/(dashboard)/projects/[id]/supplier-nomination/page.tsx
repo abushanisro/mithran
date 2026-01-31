@@ -64,9 +64,12 @@ export default function SupplierNominationMainPage() {
   }
 
   // Default dashboard view
+  const selectedBomId = searchParams.get('bomId'); // Allow BOM ID to be passed via URL
+  
   return (
     <SupplierNominationsDashboard
       projectId={projectId}
+      selectedBomId={selectedBomId || undefined}
       onSelectNomination={handleSelectNomination}
     />
   );

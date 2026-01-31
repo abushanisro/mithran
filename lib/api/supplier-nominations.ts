@@ -48,6 +48,14 @@ export interface CreateSupplierNominationData {
   evaluationGroupId?: string;
   rfqTrackingId?: string;
   vendorIds?: string[];
+  bomParts?: Array<{
+    bomItemId: string;
+    bomItemName: string;
+    partNumber?: string;
+    material?: string;
+    quantity: number;
+    vendorIds: string[];
+  }>;
 }
 
 export interface CreateCriteriaData {
@@ -132,6 +140,14 @@ export interface SupplierNomination {
   status: NominationStatus;
   criteria: NominationCriteria[];
   vendorEvaluations: VendorEvaluation[];
+  bomParts?: Array<{
+    bomItemId: string;
+    bomItemName: string;
+    partNumber?: string;
+    material?: string;
+    quantity: number;
+    vendorIds: string[];
+  }>;
   createdAt: Date;
   updatedAt: Date;
   completedAt?: Date;
@@ -145,6 +161,7 @@ export interface SupplierNominationSummary {
   status: NominationStatus;
   vendorCount: number;
   completionPercentage: number;
+  bomPartsCount?: number; // Number of BOM parts if this is a BOM-based nomination
   createdAt: Date;
 }
 
