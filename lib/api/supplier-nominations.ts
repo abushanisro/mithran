@@ -109,6 +109,67 @@ export interface EvaluationScore {
   assessedAt: Date;
 }
 
+// Evaluation Data Types
+export interface EvaluationData {
+  id: string;
+  vendor_id: string;
+  overall_score: number;
+  final_rank: number;
+  overview: {
+    overall_score: number;
+    rank: number;
+    recommendation: Recommendation;
+    risk_level: RiskLevel;
+    evaluation_notes?: string;
+    last_updated: string;
+  };
+  cost_analysis: {
+    score: number;
+    weight_percentage: number;
+    details: any;
+    cost_per_unit?: number;
+    total_cost?: number;
+    cost_competitiveness?: number;
+  };
+  rating_engine: {
+    score: number;
+    weight_percentage: number;
+    details: any;
+    overall_rating?: number;
+    quality_rating?: number;
+    delivery_rating?: number;
+    risk_level: RiskLevel;
+    minor_nc_count?: number;
+    major_nc_count?: number;
+  };
+  capability: {
+    score: number;
+    weight_percentage: number;
+    details: any;
+    manufacturing_capability?: number;
+    process_maturity?: number;
+    equipment_quality?: number;
+  };
+  technical: {
+    score: number;
+    discussion?: string;
+    details: any;
+    feasibility_score?: number;
+    innovation_capacity?: number;
+    technical_capabilities?: any;
+  };
+  criteria_scores: Array<{
+    criterion_id: string;
+    criterion_name: string;
+    category: string;
+    score: number;
+    max_score: number;
+    weighted_score: number;
+    weight_percentage: number;
+    evidence_notes?: string;
+  }>;
+}
+
 export interface VendorEvaluation {
   id: string;
   vendorId: string;
@@ -276,6 +337,45 @@ export async function updateSupplierNomination(
   data: Partial<Pick<CreateSupplierNominationData, 'nominationName' | 'description' | 'nominationType'>>
 ): Promise<SupplierNomination> {
   const response = await apiClient.put(`/supplier-nominations/${nominationId}`, data);
+  return response;
+}
+
+/**
+ * Store complete evaluation data (Overview, Cost Analysis, Rating Engine, Capability, Technical)
+ */
+export async function storeEvaluationData(
+  evaluationId: string,
+  evaluationData: {
+    overview?: any;
+    costAnalysis?: any;
+    ratingEngine?: any;
+    capability?: any;
+    technical?: any;
+  }
+): Promise<any> {
+  const response = await apiClient.post(`/supplier-nominations/evaluations/${evaluationId}/data`, evaluationData);
+  return response;
+}
+
+/**
+ * Get complete evaluation data
+ */
+export async function getEvaluationData(
+  evaluationId: string
+): Promise<any> {
+  const response = await apiClient.get(`/supplier-nominations/evaluations/${evaluationId}/data`);
+  return response;
+}
+
+/**
+ * Update specific evaluation section (overview, cost_analysis, rating_engine, capability, technical)
+ */
+export async function updateEvaluationSection(
+  evaluationId: string,
+  section: string,
+  sectionData: any
+): Promise<any> {
+  const response = await apiClient.put(`/supplier-nominations/evaluations/${evaluationId}/sections/${section}`, sectionData);
   return response;
 }
 

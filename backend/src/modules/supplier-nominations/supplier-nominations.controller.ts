@@ -199,6 +199,72 @@ export class SupplierNominationsController {
     return this.supplierNominationsService.update(userId, id, updateDto, token);
   }
 
+  @Post('evaluations/:evaluationId/data')
+  @ApiOperation({ summary: 'Store complete evaluation data (Overview, Cost Analysis, Rating Engine, Capability, Technical)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Evaluation data stored successfully'
+  })
+  storeEvaluationData(
+    @CurrentUser('id') userId: string,
+    @AccessToken() token: string,
+    @Param('evaluationId') evaluationId: string,
+    @Body() evaluationData: {
+      overview?: any;
+      costAnalysis?: any;
+      ratingEngine?: any;
+      capability?: any;
+      technical?: any;
+    }
+  ): Promise<any> {
+    return this.supplierNominationsService.storeEvaluationData(
+      userId,
+      evaluationId,
+      evaluationData,
+      token
+    );
+  }
+
+  @Get('evaluations/:evaluationId/data')
+  @ApiOperation({ summary: 'Get complete evaluation data' })
+  @ApiResponse({
+    status: 200,
+    description: 'Evaluation data retrieved successfully'
+  })
+  getEvaluationData(
+    @CurrentUser('id') userId: string,
+    @AccessToken() token: string,
+    @Param('evaluationId') evaluationId: string
+  ): Promise<any> {
+    return this.supplierNominationsService.getEvaluationData(
+      userId,
+      evaluationId,
+      token
+    );
+  }
+
+  @Put('evaluations/:evaluationId/sections/:section')
+  @ApiOperation({ summary: 'Update specific evaluation section (overview, cost_analysis, rating_engine, capability, technical)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Evaluation section updated successfully'
+  })
+  updateEvaluationSection(
+    @CurrentUser('id') userId: string,
+    @AccessToken() token: string,
+    @Param('evaluationId') evaluationId: string,
+    @Param('section') section: string,
+    @Body() sectionData: any
+  ): Promise<any> {
+    return this.supplierNominationsService.updateEvaluationSection(
+      userId,
+      evaluationId,
+      section,
+      sectionData,
+      token
+    );
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Delete supplier nomination' })
   @ApiResponse({

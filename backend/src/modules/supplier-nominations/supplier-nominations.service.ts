@@ -658,6 +658,136 @@ export class SupplierNominationsService {
     };
   }
 
+  async storeEvaluationData(
+    userId: string,
+    vendorEvaluationId: string,
+    evaluationData: {
+      overview?: any;
+      costAnalysis?: any;
+      ratingEngine?: any;
+      capability?: any;
+      technical?: any;
+    },
+    accessToken: string
+  ): Promise<any> {
+    const client = this.supabaseService.getClient(accessToken);
+
+    try {
+      // Verify ownership through nomination
+      const { data: evaluation } = await client
+        .from('vendor_nomination_evaluations')
+        .select('nomination_evaluation_id')
+        .eq('id', vendorEvaluationId)
+        .single();
+
+      if (!evaluation) {
+        throw new NotFoundException('Vendor evaluation not found');
+      }
+
+      await this.verifyNominationOwnership(userId, evaluation.nomination_evaluation_id, accessToken);
+
+      // Call database function to store evaluation data
+      const { data, error } = await client
+        .rpc('store_evaluation_data', {
+          p_vendor_evaluation_id: vendorEvaluationId,
+          p_overview_data: evaluationData.overview || {},
+          p_cost_analysis: evaluationData.costAnalysis || {},
+          p_rating_engine: evaluationData.ratingEngine || {},
+          p_capability_data: evaluationData.capability || {},
+          p_technical_data: evaluationData.technical || {}
+        });
+
+      if (error) {
+        throw new BadRequestException(`Failed to store evaluation data: ${error.message}`);
+      }
+
+      return data;
+    } catch (error) {
+      this.logger.error('Failed to store evaluation data:', error);
+      throw error;
+    }
+  }
+
+  async getEvaluationData(
+    userId: string,
+    vendorEvaluationId: string,
+    accessToken: string
+  ): Promise<any> {
+    const client = this.supabaseService.getClient(accessToken);
+
+    try {
+      // Verify ownership
+      const { data: evaluation } = await client
+        .from('vendor_nomination_evaluations')
+        .select('nomination_evaluation_id')
+        .eq('id', vendorEvaluationId)
+        .single();
+
+      if (!evaluation) {
+        throw new NotFoundException('Vendor evaluation not found');
+      }
+
+      await this.verifyNominationOwnership(userId, evaluation.nomination_evaluation_id, accessToken);
+
+      // Get complete evaluation data
+      const { data, error } = await client
+        .rpc('get_evaluation_data', {
+          p_vendor_evaluation_id: vendorEvaluationId
+        });
+
+      if (error) {
+        throw new BadRequestException(`Failed to get evaluation data: ${error.message}`);
+      }
+
+      return data;
+    } catch (error) {
+      this.logger.error('Failed to get evaluation data:', error);
+      throw error;
+    }
+  }
+
+  async updateEvaluationSection(
+    userId: string,
+    vendorEvaluationId: string,
+    section: string,
+    sectionData: any,
+    accessToken: string
+  ): Promise<any> {
+    const client = this.supabaseService.getClient(accessToken);
+
+    try {
+      // Verify ownership
+      const { data: evaluation } = await client
+        .from('vendor_nomination_evaluations')
+        .select('nomination_evaluation_id')
+        .eq('id', vendorEvaluationId)
+        .single();
+
+      if (!evaluation) {
+        throw new NotFoundException('Vendor evaluation not found');
+      }
+
+      await this.verifyNominationOwnership(userId, evaluation.nomination_evaluation_id, accessToken);
+
+      // Update specific section
+      const { data, error } = await client
+        .rpc('update_evaluation_section', {
+          p_vendor_evaluation_id: vendorEvaluationId,
+          p_section: section,
+          p_data: sectionData
+        });
+
+      if (error) {
+        throw new BadRequestException(`Failed to update evaluation section: ${error.message}`);
+      }
+
+      return data;
+    } catch (error) {
+      this.logger.error('Failed to update evaluation section:', error);
+      throw error;
+    }
+  }
+
   private async createBomParts(
     nominationId: string,
     bomParts: any[],
