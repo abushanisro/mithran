@@ -1,3 +1,10 @@
+# Digital Factory — USA Reference Export (World Average)
+
+Full machine cost/rate database, preserved with every field, in JSON form for complete fidelity, search, and programmatic use.
+
+Regenerated programmatically from `memory/sheetmetal/machine/machine_library.json` (the authoritative source — also the exact data loaded into `sm_reference_data`/`mhr_records` in the live database) — every machine, every field, no manual transcription. Verified count: **281 machines across 15 categories**.
+
+```json
 {
   "digital_factory": "USA reference export",
   "sector": "World Average",
@@ -11629,3 +11636,4 @@
     }
   ]
 }
+```
